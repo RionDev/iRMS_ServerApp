@@ -9,12 +9,9 @@ export const STATE_LABEL: Record<ServerState, string> = {
   unreported: "미수신",
 };
 
-/** 미수신 사유 — IP 는 등록됐지만 에이전트 보고가 없는 서버를 ping 결과로 나눈다 */
+/** 상태 라벨. 미수신 = IP 는 등록됐지만 에이전트 보고가 한 번도 없음 */
 export function unreportedLabel(s: Server): string {
-  if (s.state !== "unreported") return STATE_LABEL[s.state];
-  if (s.unreported_reason === "no_agent") return "에이전트 없음";
-  if (s.unreported_reason === "down") return "꺼짐";
-  return "미수신";
+  return STATE_LABEL[s.state];
 }
 
 export const TEAM_NAME: Record<number, string> = { 1: "엔진", 2: "분석" };

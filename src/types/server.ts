@@ -1,7 +1,6 @@
 /** BE resource-service 응답 타입 (src/schemas.py 와 1:1) */
 
 export type ServerState = "ok" | "warning" | "danger" | "offline" | "unreported";
-export type UnreportedReason = "no_agent" | "down" | "unknown";
 
 export interface Server {
   idx: number;
@@ -22,7 +21,6 @@ export interface Server {
 
   state: ServerState;
   online: boolean;
-  unreported_reason: UnreportedReason | null;
 
   os: string | null;
   hostname: string | null;
@@ -47,8 +45,6 @@ export interface Server {
   smart_health: string | null;
   raid_health: string | null;
   first_seen_at: string | null;
-  ping_ok: boolean | null;
-  ping_at: string | null;
   updated_at: string | null;
 }
 

@@ -104,12 +104,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
       {s.state === "unreported" && (
         <p style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-          {s.unreported_reason === "no_agent"
-            ? "IP 는 응답하지만 에이전트 보고가 없습니다. 에이전트를 설치하세요."
-            : s.unreported_reason === "down"
-              ? "IP 는 등록됐지만 켜져 있지 않습니다 (ping 무응답)."
-              : "에이전트 보고가 아직 없습니다."}
-          {s.ping_at && <span style={{ color: theme.colors.textMuted }}> · ping {timeAgo(s.ping_at)}</span>}
+          에이전트 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다.
         </p>
       )}
       {s.status === 1 && (
