@@ -17,7 +17,7 @@ export interface Server {
   access: string | null;
   account: string | null;
   description: string | null;
-  /** 1=승인대기 2=활성 3=비활성 */
+  /** 2=활성 3=비활성(폐기 서버 보관). 1=승인대기는 더 쓰지 않는다 */
   status: number;
   created_at: string;
 

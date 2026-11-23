@@ -95,7 +95,6 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         <div>
           <label style={labelStyle}>상태</label>
           <select style={selectStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="1">승인대기</option>
             <option value="2">활성</option>
             <option value="3">비활성</option>
           </select>

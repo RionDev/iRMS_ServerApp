@@ -108,9 +108,9 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           <InstallGuide intro="에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요." />
         </div>
       )}
-      {s.status === 1 && (
+      {!s.teams && (
         <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.warning }}>
-          승인대기 — 에이전트가 자동 등록한 서버입니다. "정보 수정"에서 그룹·용도를 채우고 활성으로 바꾸세요.
+          소속 팀이 비어 있습니다. "정보 수정"에서 소속 팀·태그·용도를 채우세요. (팀이 없으면 계정 정보는 ADMIN 만 볼 수 있습니다)
         </p>
       )}
 
