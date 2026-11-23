@@ -2,7 +2,8 @@ import { SearchBar } from "@common/components/SearchBar";
 import { SearchInput } from "@common/components/SearchInput";
 import { SearchSelect } from "@common/components/SearchSelect";
 import { useThemeStore } from "@common/stores/themeStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getServerTags } from "../services/serverService";
 import type { ServerListQuery, ServerState } from "../types/server";
 import { STATE_LABEL } from "../utils/format";
 
@@ -21,18 +22,22 @@ interface ServerSearchBarProps {
 
 const CHIP_STATES: (ServerState | "")[] = ["", "ok", "warning", "danger", "offline", "unreported"];
 
-/** 목업: 그룹·OS 셀렉트 + 호스트명/IP 검색 → 아래 상태 칩 */
+/** 목업: 소속 팀·태그·OS 셀렉트 + 호스트명/IP 검색 → 아래 상태 칩 */
 export function ServerSearchBar({ onSearch, state, onStateChange, actions }: ServerSearchBarProps) {
   const { theme } = useThemeStore();
   const [teams, setTeams] = useState("");
   const [os, setOs] = useState("");
   const [q, setQ] = useState("");
+  const [tag, setTag] = useState("");
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
+  useEffect(() => { getServerTags().then(setTagOptions).catch(() => setTagOptions([])); }, []);
 
   const build = (): ServerFilters => {
     const f: ServerFilters = {};
     if (teams) f.teams = Number(teams);
     if (os.trim()) f.os = os.trim();
     if (q.trim()) f.q = q.trim();
+    if (tag) f.tag = tag;
     return f;
   };
 
@@ -40,12 +45,16 @@ export function ServerSearchBar({ onSearch, state, onStateChange, actions }: Ser
     <div>
       <SearchBar
         onSearch={() => onSearch(build())}
-        onReset={() => { setTeams(""); setOs(""); setQ(""); onSearch({}); }}
+        onReset={() => { setTeams(""); setOs(""); setQ(""); setTag(""); onSearch({}); }}
       >
-        <SearchSelect value={teams} onChange={(e) => setTeams(e.target.value)} aria-label="그룹">
-          <option value="">전체 그룹</option>
+        <SearchSelect value={teams} onChange={(e) => setTeams(e.target.value)} aria-label="소속 팀">
+          <option value="">전체 팀</option>
           <option value="1">엔진</option>
           <option value="2">분석</option>
+        </SearchSelect>
+        <SearchSelect value={tag} onChange={(e) => setTag(e.target.value)} aria-label="태그">
+          <option value="">전체 태그</option>
+          {tagOptions.map((t) => <option key={t} value={t}>{t}</option>)}
         </SearchSelect>
         <SearchInput placeholder="OS (예: Ubuntu, Windows)" value={os} onChange={(e) => setOs(e.target.value)} aria-label="OS" style={{ width: "180px" }} />
         <SearchInput placeholder="호스트명, IP, 용도로 검색" value={q} onChange={(e) => setQ(e.target.value)} aria-label="검색" style={{ flex: 1 }} />

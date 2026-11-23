@@ -12,14 +12,14 @@ import { serverNavItems } from "../navigation";
 import { getAllServers } from "../services/serverService";
 import type { Server } from "../types/server";
 import { driftLabel, timeAgo } from "../utils/format";
-import { INSTALL_GUIDE } from "../utils/install";
+import { InstallGuideModal } from "../components/InstallGuide";
 
 /** 목업 "에이전트": 서버별 에이전트 버전 · 마지막 수신. 최신 버전은 보고된 버전 중 가장 높은 것 */
 export function AgentPage() {
   useAppAccess(SERVER_APP);
   const { theme } = useThemeStore();
   const [servers, setServers] = useState<Server[] | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -31,10 +31,6 @@ export function AgentPage() {
     const vs = (servers ?? []).map((s) => s.agent_version).filter((v): v is string => !!v);
     return vs.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))[0] ?? null;
   }, [servers]);
-
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(INSTALL_GUIDE); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* 클립보드 거부 */ }
-  };
 
   const muted = { color: theme.colors.textMuted };
   const columns: TableColumn<Server>[] = [
@@ -62,13 +58,14 @@ export function AgentPage() {
         <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.base }}>
           각 서버에 설치된 argus 에이전트 상태{latest && ` · 최신 버전 ${latest}`}
         </span>
-        <Button variant="secondary" onClick={copy}>{copied ? "복사됨" : "설치 명령 복사"}</Button>
+        <Button variant="secondary" onClick={() => setGuideOpen(true)}>설치 명령 보기</Button>
       </div>
       <TableBlock style={{ flex: "none" }}>
         <BaseTable items={servers ?? []} columns={columns} rowKey={(s) => s.idx} />
         {servers === null && <TableEmptyState>로딩 중...</TableEmptyState>}
         {servers !== null && servers.length === 0 && <TableEmptyState>서버가 없습니다.</TableEmptyState>}
       </TableBlock>
+      <InstallGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
     </AppLayout>
   );
 }

@@ -19,7 +19,7 @@ export async function getServers(
   size: number = 50,
 ): Promise<Page<Server>> {
   const res = await apiClient.get<Page<Server>>(`${BASE}/servers`, {
-    params: { cursor, snapshot_idx: snapshotIdx, size, state: query.state, q: query.q, os: query.os },
+    params: { cursor, snapshot_idx: snapshotIdx, size, state: query.state, q: query.q, os: query.os, tag: query.tag },
   });
   return res.data;
 }
@@ -37,6 +37,11 @@ export async function getAllServers(query: ServerListQuery = {}): Promise<Server
     cursor = page.next_cursor;
   }
   return items;
+}
+
+export async function getServerTags(): Promise<string[]> {
+  const res = await apiClient.get<{ tags: string[] }>(`${BASE}/servers/tags`);
+  return res.data.tags;
 }
 
 export async function getServerSummary(): Promise<ServerSummary> {

@@ -22,6 +22,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [ip, setIp] = useState("");
   const [teams, setTeams] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [tags, setTags] = useState("");
   const [location, setLocation] = useState("");
   const [access, setAccess] = useState("");
   const [account, setAccount] = useState("");
@@ -35,6 +36,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setIp(server?.ip ?? "");
     setTeams(server?.teams != null ? String(server.teams) : "");
     setPurpose(server?.purpose ?? "");
+    setTags((server?.tags ?? []).join(", "));
     setLocation(server?.location ?? "");
     setAccess(server?.access ?? "");
     setAccount(server?.account ?? "");
@@ -48,6 +50,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     const data: ServerWriteRequest = {
       teams: teams ? Number(teams) : null,
       purpose: purpose || undefined,
+      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       location: location || undefined,
       access: access || undefined,
       account: account || undefined,
@@ -83,6 +86,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           </select>
         </div>
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
+        <Input label="태그 (콤마로 여러 개 — 빌드, 패턴수집, DB …)" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="예: 빌드, 패턴수집" />
         <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />
         <Input label="접속 방법" value={access} onChange={(e) => setAccess(e.target.value)} placeholder="SSH, RDP, VNC…" />
         <Input label="계정" value={account} onChange={(e) => setAccount(e.target.value)} autoComplete="off" />

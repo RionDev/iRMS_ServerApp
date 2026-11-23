@@ -12,6 +12,8 @@ export interface Server {
   /** teams.idx (1=ENGINE, 2=ANALYST) */
   teams: number | null;
   purpose: string | null;
+  /** 자유 태그 (빌드, 패턴수집 …) — 소속 팀과 별개 */
+  tags: string[];
   access: string | null;
   account: string | null;
   description: string | null;
@@ -111,6 +113,7 @@ export interface ServerListQuery {
   state?: ServerState;
   q?: string;
   os?: string;
+  tag?: string;
 }
 
 export interface ServerWriteRequest {
@@ -121,6 +124,7 @@ export interface ServerWriteRequest {
   outbound_ips?: string;
   teams?: number | null;
   purpose?: string;
+  tags?: string[];
   access?: string;
   account?: string;
   password?: string;

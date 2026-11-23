@@ -14,7 +14,7 @@ import {
 } from "../services/serverService";
 import type { MetricPoint, Server, ServerEvent, ServerHardware } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, teamLabel, timeAgo, uptimeLabel } from "../utils/format";
-import { INSTALL_GUIDE } from "../utils/install";
+import { InstallGuide } from "./InstallGuide";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
@@ -105,8 +105,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
       {s.state === "unreported" && (
         <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-          <p style={{ margin: "0 0 8px" }}>에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요.</p>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>{INSTALL_GUIDE}</pre>
+          <InstallGuide intro="에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요." />
         </div>
       )}
       {s.status === 1 && (
@@ -119,6 +118,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ["IP", <span style={mono}>{s.ip}</span>],
         ["소속 팀", <span>{teamLabel(s.teams)}{s.teams == null && <span style={{ color: theme.colors.warning }}> · 미지정 — 정보 수정에서 팀을 정해야 그 팀 리더가 계정 정보를 볼 수 있음</span>}</span>],
         ["용도", s.purpose],
+        ["태그", s.tags.length ? <span style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>{s.tags.map((t) => <span key={t} style={{ padding: "1px 8px", borderRadius: "999px", border: `1px solid ${theme.colors.border}`, fontSize: theme.fontSize.sm }}>{t}</span>)}</span> : null],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],
         ["사양", spec],
         ["디스크", s.disk_total ? `${s.disk_total} 중 ${s.disks ?? "-"} 남음` : null],
