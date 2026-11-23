@@ -98,7 +98,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         <Button variant="secondary" onClick={onClose}>닫기</Button>
       </div>
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-        {can(ServerFeature.CREDENTIALS) && <Button variant="secondary" onClick={() => setCredOpen(true)}>접속 정보</Button>}
+        {can(ServerFeature.CREDENTIALS) && s.can_view_credentials && <Button variant="secondary" onClick={() => setCredOpen(true)}>접속 정보</Button>}
         {can(ServerFeature.MANAGE) && <Button variant="secondary" onClick={() => onEdit(s)}>정보 수정</Button>}
         {can(ServerFeature.MANAGE) && <Button variant="secondary" onClick={handleDelete} style={{ color: theme.colors.danger }}>삭제</Button>}
       </div>
@@ -117,7 +117,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
       {dl([
         ["IP", <span style={mono}>{s.ip}</span>],
-        ["그룹", teamLabel(s.teams)],
+        ["소속 팀", <span>{teamLabel(s.teams)}{s.teams == null && <span style={{ color: theme.colors.warning }}> · 미지정 — 정보 수정에서 팀을 정해야 그 팀 리더가 계정 정보를 볼 수 있음</span>}</span>],
         ["용도", s.purpose],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],
         ["사양", spec],

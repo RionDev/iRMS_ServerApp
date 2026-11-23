@@ -21,6 +21,8 @@ export interface Server {
 
   state: ServerState;
   online: boolean;
+  /** 요청자가 계정 정보를 볼 수 있는지 — 서버 소속 팀의 LEAD 이상 또는 ADMIN (BE 판정) */
+  can_view_credentials: boolean;
 
   os: string | null;
   hostname: string | null;

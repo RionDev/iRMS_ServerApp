@@ -75,7 +75,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
         )}
         <div>
-          <label style={labelStyle}>그룹</label>
+          <label style={labelStyle}>소속 팀 (이 팀의 리더 이상만 계정 정보 열람)</label>
           <select style={selectStyle} value={teams} onChange={(e) => setTeams(e.target.value)}>
             <option value="">미지정</option>
             <option value="1">엔진</option>
