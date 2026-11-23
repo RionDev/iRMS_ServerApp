@@ -143,9 +143,9 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
       {secTitle("CPU 최근 30분", s.hw_generation > 1 ? <span style={{ fontWeight: 400 }}>현재 장비만 · 교체 전 이력은 DB 보관</span> : undefined)}
       <Sparkline values={metrics.map((p) => p.cpu_pct)} />
 
-      {secTitle("서비스", s.service_list.length > 0 ? <span style={{ fontWeight: 400 }}>{s.os?.startsWith("VMware") ? "VM" : "자동 시작"} {s.service_list.length}개{s.services_stopped > 0 ? ` · 중지 ${s.services_stopped}` : ""}</span> : undefined)}
+      {secTitle(s.os?.startsWith("VMware") ? "VM" : "감시 서비스", s.service_list.length > 0 ? <span style={{ fontWeight: 400 }}>{s.service_list.length}개{s.services_stopped > 0 ? ` · 중지 ${s.services_stopped}` : ""}</span> : undefined)}
       {s.service_list.length === 0 ? (
-        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{s.first_seen_at ? "수집 전이거나 서비스 관리 체계가 없는 OS" : "-"}</p>
+        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{s.first_seen_at ? "지정된 감시 서비스 없음 — 서버 config.env 의 SERVICES 에 이름[:포트] 를 적으면 여기 표시된다" : "-"}</p>
       ) : s.service_list.map((v) => (
         <div key={v.name} style={rowLine}>
           <span style={mono}>{v.name}</span>
