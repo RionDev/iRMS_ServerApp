@@ -18,7 +18,9 @@ import { ServerStats } from "../components/ServerStats";
 import { ServerTable } from "../components/ServerTable";
 import { SERVER_APP, ServerFeature } from "../features";
 import { serverNavItems } from "../navigation";
+import { Modal } from "@common/components/Modal";
 import { createServer, getServer, getServers, updateServer } from "../services/serverService";
+import { INSTALL_GUIDE } from "../utils/install";
 import type { Server, ServerState, ServerWriteRequest } from "../types/server";
 
 /** 통계 카드 행(≈76) + 칩 행(≈44) 을 overhead 에 더한다 */
@@ -43,6 +45,7 @@ export function ServerListPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [lastSync, setLastSync] = useState<Date>(new Date());
+  const [installFor, setInstallFor] = useState<Server | null>(null);   // 등록 직후 에이전트 설치 안내
   const pageSize = useFixedPageSize({ overhead: OVERHEAD, rowHeight: TABLE_ROW_H });
   const filterKey = JSON.stringify({ ...filters, state });
 
@@ -79,7 +82,8 @@ export function ServerListPage() {
         const updated = await updateServer(editing.idx, data);
         setSelected(updated);
       } else {
-        await createServer(data);
+        const created = await createServer(data);
+        setInstallFor(created);
       }
       setFormOpen(false); setEditing(null); refresh();
     } catch { /* interceptor alert */ }
@@ -122,6 +126,20 @@ export function ServerListPage() {
           />
         )}
       </Drawer>
+      <Modal isOpen={installFor !== null} onClose={() => setInstallFor(null)} title="에이전트 설치 안내" maxWidth={640}>
+        {installFor && (
+          <div>
+            <p style={{ margin: "0 0 10px", fontSize: theme.fontSize.base }}>
+              <b style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{installFor.ip}</b> 이(가) 등록되었습니다. 서버에 에이전트(argus)를 설치해야 상태가 올라옵니다. 설치 전까지는 "미수신"으로 표시됩니다.
+            </p>
+            <pre style={{ margin: 0, padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: theme.fontSize.sm }}>{INSTALL_GUIDE}</pre>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
+              <Button variant="secondary" onClick={() => { navigator.clipboard?.writeText(INSTALL_GUIDE).catch(() => {}); }}>명령 복사</Button>
+              <Button onClick={() => setInstallFor(null)}>확인</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
       <ServerForm isOpen={formOpen} onClose={() => { setFormOpen(false); setEditing(null); }} server={editing} onSubmit={submitForm} />
     </AppLayout>
   );

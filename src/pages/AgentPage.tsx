@@ -12,14 +12,7 @@ import { serverNavItems } from "../navigation";
 import { getAllServers } from "../services/serverService";
 import type { Server } from "../types/server";
 import { driftLabel, timeAgo } from "../utils/format";
-
-const INSTALL_GUIDE = `# Linux / macOS / Unix
-cd argus/posix && ./check.sh && ./install.sh && ./test.sh
-
-# Windows (관리자 PowerShell)
-cd argus\\win32
-powershell -ExecutionPolicy Bypass -File install.ps1
-powershell -ExecutionPolicy Bypass -File test.ps1`;
+import { INSTALL_GUIDE } from "../utils/install";
 
 /** 목업 "에이전트": 서버별 에이전트 버전 · 마지막 수신. 최신 버전은 보고된 버전 중 가장 높은 것 */
 export function AgentPage() {

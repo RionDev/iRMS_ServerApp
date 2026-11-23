@@ -35,6 +35,9 @@ export interface Server {
   disk_total: string | null;
   disks: string | null;
   services: string | null;
+  /** services JSON 파싱 결과 (자동 시작 서비스·실행 여부, ESXi 는 VM) */
+  service_list: { name: string; state: string }[];
+  services_stopped: number;
   raid: string | null;
   uptime_sec: number | null;
   cpu_pct: number | null;

@@ -14,6 +14,7 @@ import {
 } from "../services/serverService";
 import type { MetricPoint, Server, ServerEvent, ServerHardware } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, teamLabel, timeAgo, uptimeLabel } from "../utils/format";
+import { INSTALL_GUIDE } from "../utils/install";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
@@ -103,9 +104,10 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
       </div>
 
       {s.state === "unreported" && (
-        <p style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-          에이전트 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다.
-        </p>
+        <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, fontSize: theme.fontSize.sm, color: theme.colors.text }}>
+          <p style={{ margin: "0 0 8px" }}>에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요.</p>
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>{INSTALL_GUIDE}</pre>
+        </div>
       )}
       {s.status === 1 && (
         <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.warning }}>
@@ -140,6 +142,16 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
       {secTitle("CPU 최근 30분", s.hw_generation > 1 ? <span style={{ fontWeight: 400 }}>현재 장비만 · 교체 전 이력은 DB 보관</span> : undefined)}
       <Sparkline values={metrics.map((p) => p.cpu_pct)} />
+
+      {secTitle("서비스", s.service_list.length > 0 ? <span style={{ fontWeight: 400 }}>{s.os?.startsWith("VMware") ? "VM" : "자동 시작"} {s.service_list.length}개{s.services_stopped > 0 ? ` · 중지 ${s.services_stopped}` : ""}</span> : undefined)}
+      {s.service_list.length === 0 ? (
+        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{s.first_seen_at ? "수집 전이거나 서비스 관리 체계가 없는 OS" : "-"}</p>
+      ) : s.service_list.map((v) => (
+        <div key={v.name} style={rowLine}>
+          <span style={mono}>{v.name}</span>
+          <StateBadge state={s.online ? (v.state === "running" ? "ok" : "danger") : "unreported"} label={!s.online ? "알 수 없음" : v.state === "running" ? "실행 중" : "중지"} />
+        </div>
+      ))}
 
       {secTitle("디스크 S.M.A.R.T", hw && hw.disks.length > 0 ? <span style={{ fontWeight: 400 }}>{timeAgo(hw.disks[0].updated_at)}</span> : undefined)}
       {!hw || hw.disks.length === 0 ? (
