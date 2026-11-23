@@ -16,7 +16,7 @@ import {
   getServerMetrics,
 } from "../services/serverService";
 import type { MetricPoint, Server, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
-import { driftLabel, formatDateTime, hoursLabel, teamLabel, timeAgo, uptimeLabel } from "../utils/format";
+import { driftLabel, formatDateTime, hoursLabel, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
@@ -130,15 +130,14 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           <InstallGuide intro="에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요." />
         </div>
       )}
-      {!s.teams && (
+      {!s.purpose && !s.manager && (
         <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.warning }}>
-          소속 팀이 비어 있습니다. "정보 수정"에서 소속 팀·용도·접속 정보를 채우세요. (팀이 없으면 계정 정보는 ADMIN 만 볼 수 있습니다)
+          용도·담당자가 비어 있습니다. "정보 수정"에서 채우세요.
         </p>
       )}
 
       {dl([
         ["IP", <span style={mono}>{s.ip}</span>],
-        ["소속 팀", <span>{teamLabel(s.teams)}{s.teams == null && <span style={{ color: theme.colors.warning }}> · 미지정 — 정보 수정에서 팀을 정해야 그 팀 리더가 계정 정보를 볼 수 있음</span>}</span>],
         ["용도", s.purpose],
         ["담당자", s.manager],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],

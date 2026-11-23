@@ -56,11 +56,7 @@ export function ServerListPage() {
   );
   const nav = usePagedNav<Server>({ fetcher, size: pageSize, deps: [filterKey, reloadKey] });
 
-  // 그룹(teams)은 BE 필터가 없어 FE 에서 거른다 (한 페이지 안에서)
-  const items = useMemo(
-    () => (filters.teams ? nav.items.filter((s) => s.teams === filters.teams) : nav.items),
-    [nav.items, filters.teams],
-  );
+  const items = nav.items;
 
   const refresh = useCallback(() => { setReloadKey((k) => k + 1); setLastSync(new Date()); }, []);
   useEffect(() => {

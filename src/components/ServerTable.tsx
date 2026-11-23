@@ -2,7 +2,7 @@ import { BaseTable, type TableColumn } from "@common/components/BaseTable";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useMemo } from "react";
 import type { Server } from "../types/server";
-import { teamLabel, timeAgo } from "../utils/format";
+import { timeAgo } from "../utils/format";
 import { Meter } from "./Meter";
 import { StateBadge } from "./StateBadge";
 
@@ -24,7 +24,6 @@ export function ServerTable({ servers, onSelect }: ServerTableProps) {
         cellStyle: { textAlign: "left" },
       },
       { key: "ip", label: "IP", render: (s) => <span style={{ fontFamily: "ui-monospace, Menlo, Consolas, monospace" }}>{s.ip}</span> },
-      { key: "teams", label: "소속 팀", render: (s) => teamLabel(s.teams) },
       { key: "os", label: "OS", render: (s) => s.os ?? <span style={muted}>-</span> },
       { key: "cpu_pct", label: "CPU", render: (s) => s.online ? <Meter value={s.cpu_pct} /> : <span style={muted}>-</span> },
       { key: "mem_pct", label: "메모리", render: (s) => s.online ? <Meter value={s.mem_pct} /> : <span style={muted}>-</span> },

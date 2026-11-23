@@ -129,7 +129,6 @@ export interface ServerWriteRequest {
   ports?: string;
   allowed_ips?: string;
   outbound_ips?: string;
-  teams?: number | null;
   purpose?: string;
   manager?: string;
   access?: string;

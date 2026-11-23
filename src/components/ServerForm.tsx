@@ -20,7 +20,6 @@ interface ServerFormProps {
 export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProps) {
   const { theme } = useThemeStore();
   const [ip, setIp] = useState("");
-  const [teams, setTeams] = useState("");
   const [purpose, setPurpose] = useState("");
   const [manager, setManager] = useState("");
   const [ports, setPorts] = useState("");
@@ -37,7 +36,6 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   useEffect(() => {
     if (!isOpen) return;
     setIp(server?.ip ?? "");
-    setTeams(server?.teams != null ? String(server.teams) : "");
     setPurpose(server?.purpose ?? "");
     setManager(server?.manager ?? "");
     setPorts(server?.ports ?? "");
@@ -54,7 +52,6 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: ServerWriteRequest = {
-      teams: teams ? Number(teams) : null,
       purpose: purpose || undefined,
       manager: manager || undefined,
       ports: ports || undefined,
@@ -86,14 +83,6 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         ) : (
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
         )}
-        <div>
-          <label style={labelStyle}>소속 팀 (이 팀의 리더 이상만 계정 정보 열람)</label>
-          <select style={selectStyle} value={teams} onChange={(e) => setTeams(e.target.value)}>
-            <option value="">미지정</option>
-            <option value="1">엔진</option>
-            <option value="2">분석</option>
-          </select>
-        </div>
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
         <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />

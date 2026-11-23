@@ -29,7 +29,7 @@ export function InstallGuide({ intro }: InstallGuideProps) {
           <pre style={{ margin: 0, padding: "8px 10px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: theme.fontSize.sm, color: theme.colors.text }}>{s.cmd}</pre>
         </div>
       ))}
-      <p style={{ margin: 0, fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>사전 등록은 필요 없습니다. 첫 보고에서 자동 등록되고, 그 뒤 "정보 수정"에서 소속 팀·용도·접속 정보를 채웁니다.</p>
+      <p style={{ margin: 0, fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>사전 등록은 필요 없습니다. 첫 보고에서 자동 등록되고, 그 뒤 "정보 수정"에서 담당자·용도·접속 정보를 채웁니다.</p>
     </div>
   );
 }
