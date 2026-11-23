@@ -14,10 +14,10 @@ import type { Server } from "../types/server";
 import { driftLabel, timeAgo } from "../utils/format";
 
 const INSTALL_GUIDE = `# Linux / macOS / Unix
-cd resource_monitor/posix && ./check.sh && ./install.sh && ./test.sh
+cd argus/posix && ./check.sh && ./install.sh && ./test.sh
 
 # Windows (관리자 PowerShell)
-cd resource_monitor\\win32
+cd argus\\win32
 powershell -ExecutionPolicy Bypass -File install.ps1
 powershell -ExecutionPolicy Bypass -File test.ps1`;
 
@@ -67,7 +67,7 @@ export function AgentPage() {
     <AppLayout title="에이전트" appName="서버" sidebarItems={serverNavItems} version={__APP_VERSION__} contentMaxWidth="1400px">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "8px" }}>
         <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.base }}>
-          각 서버에 설치된 resource_monitor 에이전트 상태{latest && ` · 최신 버전 ${latest}`}
+          각 서버에 설치된 argus 에이전트 상태{latest && ` · 최신 버전 ${latest}`}
         </span>
         <Button variant="secondary" onClick={copy}>{copied ? "복사됨" : "설치 명령 복사"}</Button>
       </div>
