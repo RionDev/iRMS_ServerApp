@@ -128,6 +128,9 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ["가동 시간", uptimeLabel(s.uptime_sec)],
         ["서버 시계", <span style={{ color: driftWarn ? theme.colors.warning : undefined }}>{driftLabel(s.time_drift_sec)}</span>],
         ["에이전트", s.agent_version ?? (s.first_seen_at ? "구버전" : "미설치")],
+        ["장비", s.hw_generation > 1
+          ? <span>{s.machine_id ?? "-"} <span style={{ color: theme.colors.warning }}>· {s.hw_generation}번째 장비 (교체 {formatDateTime(s.hw_changed_at)})</span></span>
+          : (s.machine_id ?? null)],
         ["마지막 수신", s.first_seen_at ? `${timeAgo(s.updated_at)} (${formatDateTime(s.updated_at)})` : "-"],
         ["접속", [s.access, s.location].filter(Boolean).join(" · ") || null],
       ])}
@@ -140,7 +143,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         </div>
       ))}
 
-      {secTitle("CPU 최근 30분")}
+      {secTitle("CPU 최근 30분", s.hw_generation > 1 ? <span style={{ fontWeight: 400 }}>현재 장비만 · 교체 전 이력은 DB 보관</span> : undefined)}
       <Sparkline values={metrics.map((p) => p.cpu_pct)} />
 
       {secTitle("디스크 S.M.A.R.T", hw && hw.disks.length > 0 ? <span style={{ fontWeight: 400 }}>{timeAgo(hw.disks[0].updated_at)}</span> : undefined)}
@@ -189,7 +192,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
       ) : events.map((e) => (
         <div key={e.idx} style={rowLine}>
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: stateColor(theme, "danger"), fontWeight: 600 }}>{e.event_type}</span>
+            <span style={{ color: e.event_type === "hardware_replaced" ? theme.colors.warning : stateColor(theme, "danger"), fontWeight: 600 }}>{e.event_type === "hardware_replaced" ? "장비 교체" : e.event_type}</span>
             <span style={{ color: theme.colors.textMuted }}> {e.detail}</span>
           </span>
           <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>{formatDateTime(e.event_at)}</span>

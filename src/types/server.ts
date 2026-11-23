@@ -28,6 +28,10 @@ export interface Server {
   hostname: string | null;
   arch: string | null;
   agent_version: string | null;
+  /** 장비 식별자(시리얼). 바뀌면 BE 가 세대를 올린다 */
+  machine_id: string | null;
+  hw_generation: number;
+  hw_changed_at: string | null;
   cpu: string | null;
   memory: string | null;
   disk_total: string | null;

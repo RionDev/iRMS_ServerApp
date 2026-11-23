@@ -49,10 +49,11 @@ export async function getServer(idx: number): Promise<Server> {
   return res.data;
 }
 
-export async function getServerMetrics(idx: number, minutes = 30): Promise<MetricPoint[]> {
-  const res = await apiClient.get<{ minutes: number; points: MetricPoint[] }>(
+/** 기본은 현재 장비 세대의 이력만 (장비 교체 전 값은 generation 으로 따로) */
+export async function getServerMetrics(idx: number, minutes = 30, generation?: number): Promise<MetricPoint[]> {
+  const res = await apiClient.get<{ minutes: number; generation: number; points: MetricPoint[] }>(
     `${BASE}/servers/${idx}/metrics`,
-    { params: { minutes } },
+    { params: { minutes, generation } },
   );
   return res.data.points;
 }
