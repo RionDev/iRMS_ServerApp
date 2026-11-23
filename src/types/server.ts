@@ -11,9 +11,9 @@ export interface Server {
   outbound_ips: string | null;
   /** teams.idx (1=ENGINE, 2=ANALYST) */
   teams: number | null;
+  /** 담당자 (자유 입력) */
+  manager: string | null;
   purpose: string | null;
-  /** 자유 태그 (빌드, 패턴수집 …) — 소속 팀과 별개 */
-  tags: string[];
   access: string | null;
   account: string | null;
   description: string | null;
@@ -101,6 +101,14 @@ export interface ServerHardware {
   raid: ServerRaid[];
 }
 
+export interface ServerHistory {
+  idx: number;
+  happened_at: string;
+  content: string;
+  author: string;
+  created_at: string;
+}
+
 export interface ServerEvent {
   idx: number;
   event_type: string;
@@ -113,7 +121,6 @@ export interface ServerListQuery {
   state?: ServerState;
   q?: string;
   os?: string;
-  tag?: string;
 }
 
 export interface ServerWriteRequest {
@@ -124,7 +131,7 @@ export interface ServerWriteRequest {
   outbound_ips?: string;
   teams?: number | null;
   purpose?: string;
-  tags?: string[];
+  manager?: string;
   access?: string;
   account?: string;
   password?: string;

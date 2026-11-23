@@ -4,6 +4,7 @@ import type {
   MetricPoint,
   Server,
   ServerEvent,
+  ServerHistory,
   ServerHardware,
   ServerListQuery,
   ServerSummary,
@@ -19,7 +20,7 @@ export async function getServers(
   size: number = 50,
 ): Promise<Page<Server>> {
   const res = await apiClient.get<Page<Server>>(`${BASE}/servers`, {
-    params: { cursor, snapshot_idx: snapshotIdx, size, state: query.state, q: query.q, os: query.os, tag: query.tag },
+    params: { cursor, snapshot_idx: snapshotIdx, size, state: query.state, q: query.q, os: query.os },
   });
   return res.data;
 }
@@ -37,11 +38,6 @@ export async function getAllServers(query: ServerListQuery = {}): Promise<Server
     cursor = page.next_cursor;
   }
   return items;
-}
-
-export async function getServerTags(): Promise<string[]> {
-  const res = await apiClient.get<{ tags: string[] }>(`${BASE}/servers/tags`);
-  return res.data.tags;
 }
 
 export async function getServerSummary(): Promise<ServerSummary> {
@@ -71,6 +67,20 @@ export async function getServerHardware(idx: number): Promise<ServerHardware> {
 export async function getServerEvents(idx: number, size = 10): Promise<Page<ServerEvent>> {
   const res = await apiClient.get<Page<ServerEvent>>(`${BASE}/servers/${idx}/events`, { params: { size } });
   return res.data;
+}
+
+export async function getServerHistory(idx: number, size = 20): Promise<Page<ServerHistory>> {
+  const res = await apiClient.get<Page<ServerHistory>>(`${BASE}/servers/${idx}/history`, { params: { size } });
+  return res.data;
+}
+
+export async function addServerHistory(idx: number, happenedAt: string, content: string): Promise<ServerHistory> {
+  const res = await apiClient.post<ServerHistory>(`${BASE}/servers/${idx}/history`, { happened_at: happenedAt, content });
+  return res.data;
+}
+
+export async function deleteServerHistory(idx: number, historyIdx: number): Promise<void> {
+  await apiClient.delete(`${BASE}/servers/${idx}/history/${historyIdx}`);
 }
 
 export async function createServer(data: ServerWriteRequest): Promise<Server> {

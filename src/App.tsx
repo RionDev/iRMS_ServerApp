@@ -3,7 +3,6 @@ import { LoginPage } from '@common/pages/LoginPage';
 import { SignupPage } from '@common/pages/SignupPage';
 import { useAuthStore } from '@common/stores/authStore';
 import { AgentPage } from './pages/AgentPage';
-import { GroupPage } from './pages/GroupPage';
 import { ServerListPage } from './pages/ServerListPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -21,7 +20,6 @@ export function App() {
       <Route path="/login" element={<LoginPage signupUrl="/server/signup" defaultRedirect="/server/" />} />
       <Route path="/signup" element={<SignupPage loginUrl="/server/login" />} />
       <Route path="/" element={<RequireAuth><ServerListPage /></RequireAuth>} />
-      <Route path="/groups" element={<RequireAuth><GroupPage /></RequireAuth>} />
       <Route path="/agents" element={<RequireAuth><AgentPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -9,10 +9,13 @@ import {
   deleteServer,
   getServerCredentials,
   getServerEvents,
+  getServerHistory,
+  addServerHistory,
+  deleteServerHistory,
   getServerHardware,
   getServerMetrics,
 } from "../services/serverService";
-import type { MetricPoint, Server, ServerEvent, ServerHardware } from "../types/server";
+import type { MetricPoint, Server, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, teamLabel, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
 import { Meter } from "./Meter";
@@ -28,7 +31,7 @@ interface ServerDetailProps {
 
 /**
  * 목업 drawer: 헤더(배지+호스트명+액션) → dl(IP·그룹·OS·사양·가동 시간·에이전트·마지막 수신)
- *   → 현재 자원 미터 → CPU 최근 30분 → 디스크 S.M.A.R.T / RAID → 최근 이벤트
+ *   → 현재 자원 미터 → CPU 최근 30분 → 감시 서비스 → 디스크 S.M.A.R.T / RAID → 최근 이벤트(에이전트) → 장비 이력(사람이 적는 기록)
  */
 export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: ServerDetailProps) {
   const { theme } = useThemeStore();
@@ -36,6 +39,11 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
   const [metrics, setMetrics] = useState<MetricPoint[]>([]);
   const [hw, setHw] = useState<ServerHardware | null>(null);
   const [events, setEvents] = useState<ServerEvent[]>([]);
+  const [history, setHistory] = useState<ServerHistory[]>([]);
+  const [histDate, setHistDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [histText, setHistText] = useState("");
+  const [histBusy, setHistBusy] = useState(false);
+  const loadHistory = () => getServerHistory(s.idx, 20).then((p) => setHistory(p.items)).catch(() => setHistory([]));
   const [credOpen, setCredOpen] = useState(false);
   const [myPw, setMyPw] = useState("");
   const [cred, setCred] = useState<{ account: string | null; password: string | null } | null>(null);
@@ -43,7 +51,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
   useEffect(() => {
     let mounted = true;
-    setMetrics([]); setHw(null); setEvents([]); setCred(null);
+    setMetrics([]); setHw(null); setEvents([]); setCred(null); setHistory([]); setHistText("");
+    getServerHistory(s.idx, 20).then((p) => mounted && setHistory(p.items)).catch(() => {});
     getServerMetrics(s.idx, 30).then((p) => mounted && setMetrics(p)).catch(() => {});
     getServerHardware(s.idx).then((h) => mounted && setHw(h)).catch(() => {});
     getServerEvents(s.idx, 5).then((p) => mounted && setEvents(p.items)).catch(() => {});
@@ -79,6 +88,19 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
     if (!confirm(`${s.ip} 서버를 삭제할까요? 이력·디스크·이벤트가 함께 지워집니다.`)) return;
     try { await deleteServer(s.idx); onAfterDelete(); onClose(); } catch { /* interceptor alert */ }
   };
+
+  const handleHistAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!histText.trim()) return;
+    setHistBusy(true);
+    try { await addServerHistory(s.idx, histDate, histText.trim()); setHistText(""); await loadHistory(); }
+    catch { alert("이력 추가에 실패했습니다."); }
+    finally { setHistBusy(false); }
+  };
+  const handleHistDelete = async (h: ServerHistory) => {
+    if (!confirm(`이 기록을 삭제할까요?\n${h.happened_at} ${h.content}`)) return;
+    try { await deleteServerHistory(s.idx, h.idx); await loadHistory(); } catch { alert("삭제에 실패했습니다."); }
+  };
   const handleCred = async (e: React.FormEvent) => {
     e.preventDefault();
     setCredBusy(true);
@@ -110,7 +132,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
       )}
       {!s.teams && (
         <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.warning }}>
-          소속 팀이 비어 있습니다. "정보 수정"에서 소속 팀·태그·용도를 채우세요. (팀이 없으면 계정 정보는 ADMIN 만 볼 수 있습니다)
+          소속 팀이 비어 있습니다. "정보 수정"에서 소속 팀·용도·접속 정보를 채우세요. (팀이 없으면 계정 정보는 ADMIN 만 볼 수 있습니다)
         </p>
       )}
 
@@ -118,18 +140,21 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ["IP", <span style={mono}>{s.ip}</span>],
         ["소속 팀", <span>{teamLabel(s.teams)}{s.teams == null && <span style={{ color: theme.colors.warning }}> · 미지정 — 정보 수정에서 팀을 정해야 그 팀 리더가 계정 정보를 볼 수 있음</span>}</span>],
         ["용도", s.purpose],
-        ["태그", s.tags.length ? <span style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>{s.tags.map((t) => <span key={t} style={{ padding: "1px 8px", borderRadius: "999px", border: `1px solid ${theme.colors.border}`, fontSize: theme.fontSize.sm }}>{t}</span>)}</span> : null],
+        ["담당자", s.manager],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],
         ["사양", spec],
         ["디스크", s.disk_total ? `${s.disk_total} 중 ${s.disks ?? "-"} 남음` : null],
         ["가동 시간", uptimeLabel(s.uptime_sec)],
         ["서버 시계", <span style={{ color: driftWarn ? theme.colors.warning : undefined }}>{driftLabel(s.time_drift_sec)}</span>],
         ["에이전트", s.agent_version ?? (s.first_seen_at ? "구버전" : "미설치")],
-        ["장비", s.hw_generation > 1
+        ["장비 식별자", s.hw_generation > 1
           ? <span>{s.machine_id ?? "-"} <span style={{ color: theme.colors.warning }}>· {s.hw_generation}번째 장비 (교체 {formatDateTime(s.hw_changed_at)})</span></span>
-          : (s.machine_id ?? null)],
+          : (s.machine_id ? <span style={mono} title="에이전트가 읽은 하드웨어 시리얼. 같은 IP 에 다른 시리얼이 오면 장비 교체로 본다">{s.machine_id}</span> : null)],
         ["마지막 수신", s.first_seen_at ? `${timeAgo(s.updated_at)} (${formatDateTime(s.updated_at)})` : "-"],
         ["접속", [s.access, s.location].filter(Boolean).join(" · ") || null],
+        ["사용 포트", s.ports ? <span style={mono}>{s.ports}</span> : null],
+        ["접근 허용 IP", s.allowed_ips ? <span style={mono}>{s.allowed_ips}</span> : null],
+        ["허용된 외부 IP", s.outbound_ips ? <span style={mono}>{s.outbound_ips}</span> : null],
       ])}
 
       {secTitle("현재 자원")}
@@ -203,6 +228,27 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
             <span style={{ color: theme.colors.textMuted }}> {e.detail}</span>
           </span>
           <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>{formatDateTime(e.event_at)}</span>
+        </div>
+      ))}
+
+      {secTitle("장비 이력", <span style={{ fontWeight: 400 }}>IP 변경 · 부품 교체 · 설정 변경 같은 기록</span>)}
+      {can(ServerFeature.MANAGE) && (
+        <form onSubmit={handleHistAdd} style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
+          <input type="date" value={histDate} onChange={(e) => setHistDate(e.target.value)} required style={{ padding: "6px 8px", borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border}`, fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm, color: theme.colors.text, backgroundColor: theme.colors.surface }} />
+          <input value={histText} onChange={(e) => setHistText(e.target.value)} placeholder="예: HDD 2번 교체 (WD 4TB)" maxLength={2000} style={{ flex: 1, padding: "6px 8px", borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border}`, fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm, color: theme.colors.text, backgroundColor: theme.colors.surface }} />
+          <Button type="submit" variant="secondary" disabled={histBusy || !histText.trim()} style={{ padding: "6px 12px", fontSize: theme.fontSize.sm }}>추가</Button>
+        </form>
+      )}
+      {history.length === 0 ? (
+        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>기록 없음</p>
+      ) : history.map((h) => (
+        <div key={h.idx} style={rowLine}>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, marginRight: "8px", whiteSpace: "nowrap" }}>{h.happened_at}</span>
+            <span>{h.content}</span>
+            <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm }}> — {h.author}</span>
+          </span>
+          {can(ServerFeature.MANAGE) && <button type="button" onClick={() => handleHistDelete(h)} title="삭제" style={{ border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>삭제</button>}
         </div>
       ))}
 

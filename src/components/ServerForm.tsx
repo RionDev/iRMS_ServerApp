@@ -22,7 +22,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [ip, setIp] = useState("");
   const [teams, setTeams] = useState("");
   const [purpose, setPurpose] = useState("");
-  const [tags, setTags] = useState("");
+  const [manager, setManager] = useState("");
+  const [ports, setPorts] = useState("");
+  const [allowedIps, setAllowedIps] = useState("");
+  const [outboundIps, setOutboundIps] = useState("");
   const [location, setLocation] = useState("");
   const [access, setAccess] = useState("");
   const [account, setAccount] = useState("");
@@ -36,7 +39,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setIp(server?.ip ?? "");
     setTeams(server?.teams != null ? String(server.teams) : "");
     setPurpose(server?.purpose ?? "");
-    setTags((server?.tags ?? []).join(", "));
+    setManager(server?.manager ?? "");
+    setPorts(server?.ports ?? "");
+    setAllowedIps(server?.allowed_ips ?? "");
+    setOutboundIps(server?.outbound_ips ?? "");
     setLocation(server?.location ?? "");
     setAccess(server?.access ?? "");
     setAccount(server?.account ?? "");
@@ -50,7 +56,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     const data: ServerWriteRequest = {
       teams: teams ? Number(teams) : null,
       purpose: purpose || undefined,
-      tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+      manager: manager || undefined,
+      ports: ports || undefined,
+      allowed_ips: allowedIps || undefined,
+      outbound_ips: outboundIps || undefined,
       location: location || undefined,
       access: access || undefined,
       account: account || undefined,
@@ -86,9 +95,12 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           </select>
         </div>
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
-        <Input label="태그 (콤마로 여러 개 — 빌드, 패턴수집, DB …)" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="예: 빌드, 패턴수집" />
+        <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
         <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />
         <Input label="접속 방법" value={access} onChange={(e) => setAccess(e.target.value)} placeholder="SSH, RDP, VNC…" />
+        <Input label="사용 포트" value={ports} onChange={(e) => setPorts(e.target.value)} placeholder="예: 22, 80, 443, 3690" />
+        <Input label="접근 허용 IP (이 서버로 들어올 수 있는 IP)" value={allowedIps} onChange={(e) => setAllowedIps(e.target.value)} placeholder="예: 192.168.100.0/24, 192.168.110.5" />
+        <Input label="허용된 외부 IP (이 서버가 나가는 외부 IP)" value={outboundIps} onChange={(e) => setOutboundIps(e.target.value)} placeholder="예: 1.2.3.4 (업데이트 서버)" />
         <Input label="계정" value={account} onChange={(e) => setAccount(e.target.value)} autoComplete="off" />
         <Input label={server ? "비밀번호 (바꿀 때만 입력)" : "비밀번호"} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
         <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="용도 메모" />

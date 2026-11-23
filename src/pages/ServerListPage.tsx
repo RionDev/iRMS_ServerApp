@@ -50,7 +50,7 @@ export function ServerListPage() {
 
   const fetcher = useCallback(
     (cursor: string | undefined, snapshotIdx: number | undefined, size: number) =>
-      getServers({ q: filters.q, os: filters.os, tag: filters.tag, state: state || undefined }, cursor, snapshotIdx, size),
+      getServers({ q: filters.q, os: filters.os, state: state || undefined }, cursor, snapshotIdx, size),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filterKey, reloadKey],
   );
