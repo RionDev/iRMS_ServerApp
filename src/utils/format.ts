@@ -96,7 +96,7 @@ export function stateReasons(s: Server): string[] {
   if (s.disk_used_pct != null && s.disk_used_pct >= 90) r.push(`디스크 ${s.disk_used_pct}% (위험 90 이상)`);
   else if (s.disk_used_pct != null && s.disk_used_pct >= 80) r.push(`디스크 ${s.disk_used_pct}% (경고 80 이상)`);
   if (s.smart_health === "failed") r.push("디스크 S.M.A.R.T FAILED (위험)");
-  else if (s.smart_health === "warn") r.push("디스크 S.M.A.R.T 경고 — 재할당·대기 섹터가 있거나 SSD 마모 80% 이상인 디스크가 있음 (아래 표에서 주황색 줄)");
+  else if (s.smart_health === "warn") r.push("디스크 S.M.A.R.T 경고 — 예비 섹터 사용률 50% 이상, 대기 섹터가 있거나 SSD 마모 80% 이상인 디스크가 있음 (아래 표에서 주황색 줄)");
   if (s.mount_health === "danger") r.push("저장소 사용률 90% 이상인 마운트가 있음 (위험 — 아래 저장소 표에서 빨간 사용률)");
   else if (s.mount_health === "warn") r.push("저장소 사용률 80% 이상인 마운트가 있음 (경고 — 아래 저장소 표에서 주황 사용률)");
   if (s.raid_health === "degraded" || s.raid_health === "failed") r.push(`RAID ${s.raid_health} (위험)`);

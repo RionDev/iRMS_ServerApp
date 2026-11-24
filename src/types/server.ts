@@ -105,6 +105,8 @@ export interface ServerDisk {
   pending_sectors: number | null;
   temperature_c: number | null;
   wearout_pct: number | null;
+  /** 예비 섹터 사용률 % (100=제조사 고장 기준). SAS·구버전 에이전트는 null */
+  spare_used_pct: number | null;
   updated_at: string;
 }
 

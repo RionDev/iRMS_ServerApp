@@ -21,14 +21,17 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
   // mounts.device 는 "sda" 또는 펌웨어 RAID·LVM 처럼 디스크 여러 개면 "sda+sdb"
   const onDev = (m: ServerMount, dev: string) => (m.device ?? "").split("+").includes(dev);
   // smartctl 이 속성 표를 못 받은 디스크(VM 가상 디스크, 컨트롤러 뒤) — health UNKNOWN 에 수명 값 전부 없음
-  const noSmart = (d: ServerDisk) => (d.health == null || d.health.toUpperCase() === "UNKNOWN") && d.reallocated_sectors == null && d.pending_sectors == null && d.wearout_pct == null && d.power_on_hours == null;
+  const noSmart = (d: ServerDisk) => (d.health == null || d.health.toUpperCase() === "UNKNOWN") && d.reallocated_sectors == null && d.pending_sectors == null && d.wearout_pct == null && d.spare_used_pct == null && d.power_on_hours == null;
   const mountsOf = (dev: string | null) => (dev ? localMounts.filter((m) => onDev(m, dev)) : []);
   // 디스크 행: hw.disks 전부. S.M.A.R.T 가 없는 로컬 장치(VM 등)는 마운트만으로 한 줄
   const disksByDev = new Map<string, ServerDisk[]>();
   for (const d of hw.disks) { const k = d.os_device ?? ""; disksByDev.set(k, [...(disksByDev.get(k) ?? []), d]); }
   const localDevsWithoutSmart = [...new Set(localMounts.flatMap((m) => (m.device ?? "").split("+")))].filter((dev) => dev && !disksByDev.has(dev));
   const raidOf = (d: ServerDisk) => { const r = hw.raid.find((x) => d.raid?.startsWith(x.controller)); return r; };
-  const bad = (d: ServerDisk) => d.health === "FAILED" ? "danger" : ((d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.wearout_pct ?? 0) >= 80) ? "warning" : null;
+  // 경고 기준은 panoptes smart_summary 와 같게 — 재할당 개수는 표시만 하고 판정에 안 씀
+  const SPARE_WARN_PCT = 50;
+  const bad = (d: ServerDisk) => d.health === "FAILED" ? "danger" : ((d.spare_used_pct ?? 0) >= SPARE_WARN_PCT || (d.pending_sectors ?? 0) > 0 || (d.wearout_pct ?? 0) >= 80) ? "warning" : null;
+  const warnText = (on: boolean): React.CSSProperties => on ? { ...muted, color: theme.colors.warning, fontWeight: 600 } : muted;
   const pctColor = (p: number | null) => p == null ? undefined : p >= 90 ? theme.colors.danger : p >= 80 ? theme.colors.warning : undefined;
   const bar = (p: number | null) => (
     <div style={{ height: "6px", width: "56px", marginLeft: "auto", marginTop: "3px", background: theme.colors.surfaceMuted, borderRadius: "3px", overflow: "hidden" }}>
@@ -71,8 +74,10 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
               <td style={{ ...td, ...r }}>
                 {noSmart(d) ? <span style={muted}>S.M.A.R.T 없음</span> : <>
                 <span style={muted}>{d.power_on_hours != null ? `${hoursLabel(d.power_on_hours)} · ` : ""}</span>
-                <span style={{ color: (d.reallocated_sectors ?? 0) > 0 ? theme.colors.warning : undefined, fontWeight: (d.reallocated_sectors ?? 0) > 0 ? 600 : undefined }}>재할당 {d.reallocated_sectors ?? "-"}</span>
-                <span style={muted}> · 대기 {d.pending_sectors ?? "-"}{d.wearout_pct != null ? ` · 마모 ${d.wearout_pct}%` : ""}</span></>}
+                <span>재할당 {d.reallocated_sectors ?? "-"}</span>
+                {d.spare_used_pct != null && <span style={warnText(d.spare_used_pct >= SPARE_WARN_PCT)} title="예비 섹터 사용률 — 100%면 제조사 고장 기준"> · 예비 {d.spare_used_pct}%</span>}
+                <span style={warnText((d.pending_sectors ?? 0) > 0)}> · 대기 {d.pending_sectors ?? "-"}</span>
+                <span style={warnText((d.wearout_pct ?? 0) >= 80)}>{d.wearout_pct != null ? ` · 마모 ${d.wearout_pct}%` : ""}</span></>}
               </td>
               <td style={{ ...td, color: b === "danger" ? theme.colors.danger : b === "warning" ? theme.colors.warning : theme.colors.success, fontWeight: 600 }}>{b === "danger" ? "위험" : b === "warning" ? "경고" : noSmart(d) ? <span style={muted}>읽기 불가</span> : d.health ?? "-"}</td>
             </tr>
