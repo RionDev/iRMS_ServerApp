@@ -3,6 +3,7 @@ import type { Page } from "@common/types/pagination";
 import type {
   MetricPoint,
   Server,
+  ServerCredential,
   ServerEvent,
   ServerHistory,
   ServerHardware,
@@ -97,13 +98,7 @@ export async function deleteServer(idx: number): Promise<void> {
   await apiClient.delete(`${BASE}/servers/${idx}`);
 }
 
-export async function getServerCredentials(
-  idx: number,
-  myPassword: string,
-): Promise<{ account: string | null; password: string | null }> {
-  const res = await apiClient.post<{ account: string | null; password: string | null }>(
-    `${BASE}/servers/${idx}/credentials`,
-    { password: myPassword },
-  );
-  return res.data;
+export async function getServerCredentials(idx: number, myPassword: string): Promise<ServerCredential[]> {
+  const res = await apiClient.post<{ accounts: ServerCredential[] }>(`${BASE}/servers/${idx}/credentials`, { password: myPassword });
+  return res.data.accounts;
 }

@@ -4,6 +4,8 @@ import { Modal } from "@common/components/Modal";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
 import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
+import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
+import type { ServerAccountInput } from "../types/server";
 import type { Server, ServerWriteRequest } from "../types/server";
 
 interface ServerFormProps {
@@ -24,12 +26,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [purpose, setPurpose] = useState("");
   const [manager, setManager] = useState("");
   const [ports, setPorts] = useState<PortEntry[]>([]);
-  const [allowedIps, setAllowedIps] = useState("");
-  const [outboundIps, setOutboundIps] = useState("");
+  const [allowedIps, setAllowedIps] = useState<IpEntry[]>([]);
+  const [outboundIps, setOutboundIps] = useState<IpEntry[]>([]);
   const [location, setLocation] = useState("");
-  const [access, setAccess] = useState("");
-  const [account, setAccount] = useState("");
-  const [password, setPassword] = useState("");
+  const [accounts, setAccounts] = useState<ServerAccountInput[]>([]);
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("2");
   const [saving, setSaving] = useState(false);
@@ -40,12 +40,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setPurpose(server?.purpose ?? "");
     setManager(server?.manager ?? "");
     setPorts(server?.ports ? parsePorts(server.ports) : []);
-    setAllowedIps(server?.allowed_ips ?? "");
-    setOutboundIps(server?.outbound_ips ?? "");
+    setAllowedIps(parseIpList(server?.allowed_ips));
+    setOutboundIps(parseIpList(server?.outbound_ips));
     setLocation(server?.location ?? "");
-    setAccess(server?.access ?? "");
-    setAccount(server?.account ?? "");
-    setPassword("");
+    setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "" })));
     setDescription(server?.description ?? "");
     setStatus(String(server?.status ?? 2));
   }, [isOpen, server]);
@@ -56,15 +54,13 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
       purpose: purpose || undefined,
       manager: manager || undefined,
       ports: formatPorts(ports) || undefined,
-      allowed_ips: allowedIps || undefined,
-      outbound_ips: outboundIps || undefined,
+      allowed_ips: formatIpList(allowedIps) || undefined,
+      outbound_ips: formatIpList(outboundIps) || undefined,
+      accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
       location: location || undefined,
-      access: access || undefined,
-      account: account || undefined,
       description: description || undefined,
       status: Number(status),
     };
-    if (password) data.password = password;
     if (!server) data.ip = ip.trim();
     setSaving(true);
     try { await onSubmit(data); } finally { setSaving(false); }
@@ -75,6 +71,26 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     fontFamily: theme.fontFamily, fontSize: theme.fontSize.base, color: theme.colors.text, backgroundColor: theme.colors.surface, boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = { display: "block", fontSize: theme.fontSize.sm, color: theme.colors.textMuted, marginBottom: "4px" };
+  const monoStyle: React.CSSProperties = { fontFamily: "ui-monospace, Menlo, Consolas, monospace" };
+  const xBtn: React.CSSProperties = { border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.base };
+  const addBtn: React.CSSProperties = { alignSelf: "flex-start", border: `1px dashed ${theme.colors.border}`, background: "none", color: theme.colors.textMuted, borderRadius: theme.radius.sm, padding: "4px 10px", cursor: "pointer", fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm };
+  /** "IP | 설명" 줄 편집기 (접근 허용 IP · 허용된 외부 IP 공용) */
+  const ipRows = (label: string, rows: IpEntry[], setRows: (r: IpEntry[]) => void, phIp: string, phNote: string) => (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 12px 1fr 20px", gap: "6px", alignItems: "center" }}>
+            <input value={r.ip} onChange={(e) => setRows(rows.map((x, k) => (k === i ? { ...x, ip: e.target.value } : x)))} placeholder={phIp} style={{ ...selectStyle, ...monoStyle }} />
+            <span style={{ color: theme.colors.textMuted, textAlign: "center" }}>|</span>
+            <input value={r.note} onChange={(e) => setRows(rows.map((x, k) => (k === i ? { ...x, note: e.target.value } : x)))} placeholder={phNote} style={selectStyle} />
+            <button type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => setRows([...rows, { ip: "", note: "" }])} style={addBtn}>+ IP 추가</button>
+      </div>
+    </div>
+  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={server ? "서버 정보 수정" : "서버 등록"}>
@@ -87,7 +103,25 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
         <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />
-        <Input label="접속 방법" value={access} onChange={(e) => setAccess(e.target.value)} placeholder="SSH, RDP, VNC…" />
+        <div>
+          <label style={labelStyle}>접속 계정 — 방법 | 포트 | 계정 | 비밀번호 (한 서버에 여러 줄){server ? ". 비밀번호는 바꿀 때만 입력" : ""}</label>
+          <datalist id="access-methods"><option value="SSH" /><option value="RDP" /><option value="VNC" /><option value="Web" /><option value="Telnet" /><option value="FTP" /><option value="iDRAC" /></datalist>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {accounts.map((a, i) => {
+              const set = (patch: Partial<ServerAccountInput>) => setAccounts(accounts.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 80px 1fr 1fr 20px", gap: "6px", alignItems: "center" }}>
+                  <input value={a.access} list="access-methods" onChange={(e) => set({ access: e.target.value })} placeholder="SSH, RDP …" style={selectStyle} />
+                  <input value={a.port ?? ""} onChange={(e) => set({ port: e.target.value })} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, ...monoStyle }} />
+                  <input value={a.account ?? ""} onChange={(e) => set({ account: e.target.value })} placeholder="계정" autoComplete="off" style={{ ...selectStyle, ...monoStyle }} />
+                  <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder={server ? "(유지)" : "비밀번호"} autoComplete="new-password" style={{ ...selectStyle, ...monoStyle }} />
+                  <button type="button" onClick={() => setAccounts(accounts.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setAccounts([...accounts, { access: "", port: "", account: "", password: "" }])} style={addBtn}>+ 계정 추가</button>
+          </div>
+        </div>
         <div>
           <label style={labelStyle}>사용 포트 (용도 | 포트)</label>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -102,16 +136,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
             <button type="button" onClick={() => setPorts([...ports, { purpose: "", port: "" }])} style={{ alignSelf: "flex-start", border: `1px dashed ${theme.colors.border}`, background: "none", color: theme.colors.textMuted, borderRadius: theme.radius.sm, padding: "4px 10px", cursor: "pointer", fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm }}>+ 포트 추가</button>
           </div>
         </div>
-        <div>
-          <label style={labelStyle}>접근 허용 IP (이 서버로 들어올 수 있는 IP) — 한 줄에 하나</label>
-          <textarea value={allowedIps} onChange={(e) => setAllowedIps(e.target.value)} rows={3} placeholder={"192.168.100.0/24\n192.168.110.5  사무실 PC"} style={{ ...selectStyle, resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
-        </div>
-        <div>
-          <label style={labelStyle}>허용된 외부 IP (이 서버가 나가는 외부 IP) — 한 줄에 하나</label>
-          <textarea value={outboundIps} onChange={(e) => setOutboundIps(e.target.value)} rows={3} placeholder={"1.2.3.4  업데이트 서버"} style={{ ...selectStyle, resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
-        </div>
-        <Input label="계정" value={account} onChange={(e) => setAccount(e.target.value)} autoComplete="off" />
-        <Input label={server ? "비밀번호 (바꿀 때만 입력)" : "비밀번호"} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+        {ipRows("접근 허용 IP (이 서버로 들어올 수 있는 IP) — IP | 설명", allowedIps, setAllowedIps, "192.168.100.0/24", "사내망")}
+        {ipRows("허용된 외부 IP (이 서버가 나가는 외부 IP) — IP | 설명", outboundIps, setOutboundIps, "1.2.3.4", "업데이트 서버")}
         <div>
           <label style={labelStyle}>메모</label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="엑셀의 etc 란. 자유 메모" style={{ ...selectStyle, resize: "vertical" }} />

@@ -15,10 +15,11 @@ import {
   getServerHardware,
   getServerMetrics,
 } from "../services/serverService";
-import type { MetricPoint, Server, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
+import type { MetricPoint, Server, ServerCredential, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
 import { parsePorts } from "../utils/ports";
+import { parseIpList } from "../utils/iplist";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
@@ -47,7 +48,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
   const loadHistory = () => getServerHistory(s.idx, 20).then((p) => setHistory(p.items)).catch(() => setHistory([]));
   const [credOpen, setCredOpen] = useState(false);
   const [myPw, setMyPw] = useState("");
-  const [cred, setCred] = useState<{ account: string | null; password: string | null } | null>(null);
+  const [cred, setCred] = useState<ServerCredential[] | null>(null);
   const [credBusy, setCredBusy] = useState(false);
 
   useEffect(() => {
@@ -76,6 +77,13 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
     </dl>
   );
   const mono: React.CSSProperties = { fontFamily: "ui-monospace, Menlo, Consolas, monospace" };
+  const ipTable = (raw: string) => (
+    <table style={{ borderCollapse: "collapse", fontSize: theme.fontSize.sm }}><tbody>
+      {parseIpList(raw).map((e, i) => (
+        <tr key={i}><td style={{ padding: "1px 10px 1px 0", ...mono }}>{e.ip}</td><td style={{ padding: "1px 0", color: theme.colors.textMuted }}>{e.note}</td></tr>
+      ))}
+    </tbody></table>
+  );
   const rowLine: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${theme.colors.surfaceMuted}`, fontSize: theme.fontSize.base, gap: "8px" };
   const healthColor = (h: string | null) => {
     const v = (h ?? "").toLowerCase();
@@ -152,7 +160,13 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           ? <span>{s.machine_id ?? "-"} <span style={{ color: theme.colors.warning }}>· {s.hw_generation}번째 장비 (교체 {formatDateTime(s.hw_changed_at)})</span></span>
           : (s.machine_id ? <span style={mono} title="에이전트가 읽은 하드웨어 시리얼. 같은 IP 에 다른 시리얼이 오면 장비 교체로 본다">{s.machine_id}</span> : null)],
         ["마지막 수신", s.first_seen_at ? `${timeAgo(s.updated_at)} (${formatDateTime(s.updated_at)})` : "-"],
-        ["접속", [s.access, s.location].filter(Boolean).join(" · ") || null],
+        ["접속", s.account_count > 0 ? (
+          <span style={{ display: "inline-flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
+            {s.access_methods.map((m) => <span key={m} style={{ padding: "1px 8px", borderRadius: "999px", border: `1px solid ${theme.colors.border}`, fontSize: theme.fontSize.sm }}>{m}</span>)}
+            <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm }}>· 계정 {s.account_count}개{s.can_view_credentials ? " — [접속 정보] 에서" : ""}</span>
+          </span>
+        ) : null],
+        ["설치 위치", s.location],
         ["사용 포트", s.ports ? (
           <table style={{ borderCollapse: "collapse", fontSize: theme.fontSize.sm }}><tbody>
             {parsePorts(s.ports).map((p, i) => (
@@ -163,8 +177,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
             ))}
           </tbody></table>
         ) : null],
-        ["접근 허용 IP", s.allowed_ips ? <span style={{ ...mono, whiteSpace: "pre-wrap" }}>{s.allowed_ips.split(/,\s*/).join("\n")}</span> : null],
-        ["허용된 외부 IP", s.outbound_ips ? <span style={{ ...mono, whiteSpace: "pre-wrap" }}>{s.outbound_ips.split(/,\s*/).join("\n")}</span> : null],
+        ["접근 허용 IP", s.allowed_ips ? ipTable(s.allowed_ips) : null],
+        ["허용된 외부 IP", s.outbound_ips ? ipTable(s.outbound_ips) : null],
       ])}
 
       {secTitle("현재 자원")}
@@ -264,7 +278,19 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
 
       <Modal isOpen={credOpen} onClose={() => { setCredOpen(false); setCred(null); setMyPw(""); }} title="접속 정보">
         {cred ? (
-          dl([["계정", <span style={mono}>{cred.account ?? "-"}</span>], ["비밀번호", <span style={mono}>{cred.password ?? "-"}</span>], ["접속", s.access]])
+          cred.length === 0 ? <p style={{ margin: 0, color: theme.colors.textMuted, fontSize: theme.fontSize.sm }}>등록된 계정이 없습니다. "정보 수정"에서 접속 계정을 추가하세요.</p> : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: theme.fontSize.base }}>
+              <thead><tr>{["방법", "포트", "계정", "비밀번호"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", fontSize: theme.fontSize.sm, color: theme.colors.textMuted, borderBottom: `1px solid ${theme.colors.border}` }}>{h}</th>)}</tr></thead>
+              <tbody>{cred.map((c, i) => (
+                <tr key={i}>
+                  <td style={{ padding: "6px 8px" }}>{c.access}</td>
+                  <td style={{ padding: "6px 8px", ...mono }}>{c.port ?? "-"}</td>
+                  <td style={{ padding: "6px 8px", ...mono }}>{c.account ?? "-"}</td>
+                  <td style={{ padding: "6px 8px", ...mono }}>{c.password ?? "-"}{c.password && <button type="button" title="복사" onClick={() => { navigator.clipboard.writeText(c.password ?? "").catch(() => {}); }} style={{ marginLeft: "6px", border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer" }}>⧉</button>}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )
         ) : (
           <form onSubmit={handleCred}>
             <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>본인 비밀번호로 다시 인증합니다. 조회는 감사 로그에 남습니다.</p>

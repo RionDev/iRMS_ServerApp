@@ -14,9 +14,12 @@ export interface Server {
   /** 담당자 (자유 입력) */
   manager: string | null;
   purpose: string | null;
-  access: string | null;
-  account: string | null;
   description: string | null;
+  /** 접속 계정 (비밀번호 제외) — 수정 폼 채우기·상세 표시용 */
+  accounts: ServerAccount[];
+  /** 접속 방법 목록 (중복 제거) */
+  access_methods: string[];
+  account_count: number;
   /** 2=활성 3=비활성(폐기 서버 보관). 1=승인대기는 더 쓰지 않는다 */
   status: number;
   created_at: string;
@@ -101,6 +104,27 @@ export interface ServerHardware {
   raid: ServerRaid[];
 }
 
+export interface ServerAccount {
+  idx: number;
+  access: string;
+  port: string | null;
+  account: string | null;
+}
+
+export interface ServerAccountInput {
+  access: string;
+  port?: string;
+  account?: string;
+  password?: string;
+}
+
+export interface ServerCredential {
+  access: string;
+  port: string | null;
+  account: string | null;
+  password: string | null;
+}
+
 export interface ServerHistory {
   idx: number;
   happened_at: string;
@@ -131,9 +155,8 @@ export interface ServerWriteRequest {
   outbound_ips?: string;
   purpose?: string;
   manager?: string;
-  access?: string;
-  account?: string;
-  password?: string;
+  /** 접속 계정 전부 교체. 생략하면 그대로. password 빈 줄은 기존 값 유지 */
+  accounts?: ServerAccountInput[];
   description?: string;
   status?: number;
 }
