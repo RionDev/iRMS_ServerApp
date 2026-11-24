@@ -97,6 +97,8 @@ export function stateReasons(s: Server): string[] {
   else if (s.disk_used_pct != null && s.disk_used_pct >= 80) r.push(`디스크 ${s.disk_used_pct}% (경고 80 이상)`);
   if (s.smart_health === "failed") r.push("디스크 S.M.A.R.T FAILED (위험)");
   else if (s.smart_health === "warn") r.push("디스크 S.M.A.R.T 경고 — 재할당·대기 섹터가 있거나 SSD 마모 80% 이상인 디스크가 있음 (아래 표에서 주황색 줄)");
+  if (s.mount_health === "danger") r.push("저장소 사용률 90% 이상인 마운트가 있음 (위험 — 아래 저장소 표에서 빨간 사용률)");
+  else if (s.mount_health === "warn") r.push("저장소 사용률 80% 이상인 마운트가 있음 (경고 — 아래 저장소 표에서 주황 사용률)");
   if (s.raid_health === "degraded" || s.raid_health === "failed") r.push(`RAID ${s.raid_health} (위험)`);
   else if (s.raid_health === "rebuilding") r.push("RAID 리빌드 중 (경고)");
   if (s.time_drift_sec != null && Math.abs(s.time_drift_sec) > 60) r.push(`서버 시계 ${driftLabel(s.time_drift_sec)} (경고, 60초 초과)`);

@@ -54,6 +54,7 @@ export interface Server {
   time_drift_sec: number | null;
   smart_health: string | null;
   raid_health: string | null;
+  mount_health: string | null;
   first_seen_at: string | null;
   updated_at: string | null;
 }
@@ -76,8 +77,26 @@ export interface MetricPoint {
   drift_sec: number | null;
 }
 
+export interface ServerMount {
+  path: string;
+  fs: string | null;
+  fstype: string | null;
+  /** 올라탄 디스크 (sda). 원격이면 null — ServerDisk.os_device 와 연결 */
+  device: string | null;
+  total_gb: number | null;
+  used_gb: number | null;
+  used_pct: number | null;
+  updated_at: string;
+}
+
 export interface ServerDisk {
   device: string;
+  /** 물리 슬롯 (252:6) 또는 직결 장치명 */
+  slot: string | null;
+  /** 이 디스크가 이루는 OS 장치 (sda) */
+  os_device: string | null;
+  /** 소속 RAID (c0 VD239 RAID6) */
+  raid: string | null;
   model: string | null;
   serial: string | null;
   health: string | null;
@@ -102,6 +121,7 @@ export interface ServerRaid {
 export interface ServerHardware {
   disks: ServerDisk[];
   raid: ServerRaid[];
+  mounts: ServerMount[];
 }
 
 export interface ServerAccount {

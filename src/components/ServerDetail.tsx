@@ -21,6 +21,7 @@ import { parseIpList } from "../utils/iplist";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
+import { StorageTable } from "./StorageTable";
 
 interface ServerDetailProps {
   server: Server;
@@ -196,48 +197,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         </div>
       ))}
 
-      {secTitle("디스크 S.M.A.R.T", hw && hw.disks.length > 0 ? <span style={{ fontWeight: 400 }}>{timeAgo(hw.disks[0].updated_at)}</span> : undefined)}
-      {!hw || hw.disks.length === 0 ? (
-        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>
-          {s.smart_health === "none" || !s.first_seen_at ? "수집 대상 아님 (VM·RAID 뒤 디스크·Unix)" : "아직 수집 전"}
-        </p>
-      ) : hw.disks.map((d) => {
-        const bad = d.health === "FAILED" || (d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.wearout_pct ?? 0) >= 80;
-        return (
-        <div key={d.device} style={{ ...rowLine, ...(bad ? { color: d.health === "FAILED" ? theme.colors.danger : theme.colors.warning } : {}) }}>
-          <span style={{ minWidth: 0 }}>
-            <span style={mono}>{d.device}</span>{bad && <span style={{ marginLeft: "6px", fontSize: theme.fontSize.sm, fontWeight: 600 }}>{d.health === "FAILED" ? "위험" : "경고"}</span>}
-            {d.model && <span style={{ color: theme.colors.textMuted }}> · {d.model}</span>}
-            <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>
-              {[
-                d.power_on_hours != null && `가동 ${hoursLabel(d.power_on_hours)}`,
-                d.reallocated_sectors != null && `재할당 ${d.reallocated_sectors}`,
-                d.pending_sectors != null && `대기 ${d.pending_sectors}`,
-                d.temperature_c != null && `${d.temperature_c}°C`,
-                d.wearout_pct != null && `마모 ${d.wearout_pct}%`,
-              ].filter(Boolean).join(" · ")}
-            </div>
-          </span>
-          <span style={{ color: healthColor(d.health), fontWeight: 600, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>{d.health ?? "-"}</span>
-        </div>
-        );
-      })}
-
-      {secTitle("RAID")}
-      {!hw || hw.raid.length === 0 ? (
-        <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{s.raid && s.raid !== "N/A" ? `레벨 ${s.raid} · 상태 수집 전` : "RAID 없음"}</p>
-      ) : hw.raid.map((r) => (
-        <div key={r.controller} style={rowLine}>
-          <span>
-            <span style={mono}>{r.controller}</span>
-            {r.model && <span style={{ color: theme.colors.textMuted }}> · {r.model}</span>}
-            {s.raid && s.raid !== "N/A" && <span style={{ color: theme.colors.textMuted }}> · {s.raid}</span>}
-          </span>
-          <span style={{ color: healthColor(r.health), fontWeight: 600, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>
-            {r.health}{r.rebuild_pct != null ? ` ${r.rebuild_pct}%` : ""}
-          </span>
-        </div>
-      ))}
+      {secTitle("저장소", hw ? <span style={{ fontWeight: 400 }}>한 줄 = 디스크 한 개 · 로컬 {hw.disks.length || hw.mounts.filter((m) => m.device).length} · 원격 {hw.mounts.filter((m) => !m.device).length}{hw.mounts[0] ? ` · ${timeAgo(hw.mounts[0].updated_at)}` : ""}</span> : undefined)}
+      <StorageTable hw={hw} reported={!!s.first_seen_at} />
 
       {secTitle("최근 이벤트")}
       {events.length === 0 ? (

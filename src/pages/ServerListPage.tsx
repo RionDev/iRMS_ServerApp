@@ -115,7 +115,7 @@ export function ServerListPage() {
         </TableBlock>
       </div>
 
-      <Drawer isOpen={selected !== null} onClose={() => setSelected(null)} width="520px">
+      <Drawer isOpen={selected !== null} onClose={() => setSelected(null)} width="900px">
         {selected && (
           <ServerDetail
             server={selected}
