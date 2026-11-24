@@ -52,13 +52,14 @@ export function ServerListPage() {
     (cursor: string | undefined, snapshotIdx: number | undefined, size: number) =>
       getServers({ q: filters.q, os: filters.os, state: state || undefined }, cursor, snapshotIdx, size),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filterKey, reloadKey],
+    [filterKey],
   );
-  const nav = usePagedNav<Server>({ fetcher, size: pageSize, deps: [filterKey, reloadKey] });
+  const nav = usePagedNav<Server>({ fetcher, size: pageSize, deps: [filterKey] });
 
   const items = nav.items;
 
-  const refresh = useCallback(() => { setReloadKey((k) => k + 1); setLastSync(new Date()); }, []);
+  // 자동 새로고침: 목록은 nav.refresh (기존 행 유지 → 깜빡임 없음), 카드·드로어는 reloadKey 로 다시 읽는다
+  const refresh = useCallback(() => { void nav.refresh(); setReloadKey((k) => k + 1); setLastSync(new Date()); }, [nav.refresh]);
   useEffect(() => {
     const t = setInterval(refresh, REFRESH_MS);
     return () => clearInterval(t);
