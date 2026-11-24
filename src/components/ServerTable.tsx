@@ -2,7 +2,7 @@ import { BaseTable, type TableColumn } from "@common/components/BaseTable";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useMemo } from "react";
 import type { Server } from "../types/server";
-import { timeAgo } from "../utils/format";
+import { shortReasons, stateReasons, timeAgo } from "../utils/format";
 import { Meter } from "./Meter";
 import { StateBadge } from "./StateBadge";
 
@@ -17,7 +17,19 @@ export function ServerTable({ servers, onSelect }: ServerTableProps) {
   const muted = { color: theme.colors.textMuted };
   const columns = useMemo<TableColumn<Server>[]>(
     () => [
-      { key: "state", label: "상태", render: (s) => <StateBadge server={s} /> },
+      {
+        key: "state", label: "상태",
+        // 경고·위험이면 배지 밑에 짧은 사유, 마우스를 올리면 자세한 사유 (상세 화면과 같은 규칙)
+        render: (s) => {
+          const bad = s.state === "warning" || s.state === "danger";
+          return (
+            <span title={bad ? stateReasons(s).join("\n") : undefined} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <StateBadge server={s} />
+              {bad && <span style={{ ...muted, fontSize: theme.fontSize.xs, whiteSpace: "nowrap" }}>{shortReasons(s).join(" · ")}</span>}
+            </span>
+          );
+        },
+      },
       {
         key: "hostname", label: "호스트명",
         render: (s) => <b style={{ fontWeight: 500 }}>{s.hostname ?? s.purpose ?? <span style={muted}>-</span>}</b>,

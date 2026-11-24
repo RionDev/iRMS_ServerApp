@@ -86,6 +86,23 @@ export function sizeLabel(raw: string | null | undefined): string {
   return `${gb.toFixed(gb >= 100 ? 0 : 1)}GB`;
 }
 
+/** 목록 표용 짧은 사유 — stateReasons 와 같은 규칙, 한 단어씩 */
+export function shortReasons(s: Server): string[] {
+  const r: string[] = [];
+  if (s.cpu_pct != null && s.cpu_pct >= 75) r.push(`CPU ${s.cpu_pct}%`);
+  if (s.mem_pct != null && s.mem_pct >= 75) r.push(`메모리 ${s.mem_pct}%`);
+  if (s.disk_used_pct != null && s.disk_used_pct >= 80) r.push(`디스크 ${s.disk_used_pct}%`);
+  if (s.smart_health === "failed") r.push("S.M.A.R.T FAILED");
+  else if (s.smart_health === "warn") r.push("S.M.A.R.T 경고");
+  if (s.mount_health === "danger") r.push("저장소 90%↑");
+  else if (s.mount_health === "warn") r.push("저장소 80%↑");
+  if (s.raid_health === "degraded" || s.raid_health === "failed") r.push(`RAID ${s.raid_health}`);
+  else if (s.raid_health === "rebuilding") r.push("RAID 리빌드");
+  if (s.time_drift_sec != null && Math.abs(s.time_drift_sec) > 60) r.push(`시계 ${driftLabel(s.time_drift_sec)}`);
+  if (s.services_stopped > 0) r.push(`서비스 ${s.services_stopped}개 중지`);
+  return r;
+}
+
 /** 상태가 경고·위험인 이유 — BE _state_expr 와 같은 규칙 (CPU·메모리 75/90, 디스크 80/90, S.M.A.R.T, RAID, 시계 60초, 감시 서비스) */
 export function stateReasons(s: Server): string[] {
   const r: string[] = [];

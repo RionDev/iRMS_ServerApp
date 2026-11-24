@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
 import type { ServerAccountInput, ServerHistory } from "../types/server";
-import { addServerHistory, deleteServerHistory, getServerHistory } from "../services/serverService";
+import { addServerHistory, deleteServerHistory, getAllServers, getServerHistory } from "../services/serverService";
 import type { Server, ServerWriteRequest } from "../types/server";
 
 interface ServerFormProps {
@@ -22,6 +22,9 @@ interface ServerFormProps {
  * 목업 "서버 등록" 모달. 에이전트가 먼저 보고한 서버는 자동 등록되므로
  * 등록은 에이전트를 설치할 수 없는 장비(NAS 등)용이고, 수정은 자동 등록된 서버의 담당자·용도 보완용이다.
  */
+/** 접속 방식 → 기본 포트. 포트 칸이 비어 있을 때만 채운다 */
+const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443" };
+
 export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProps) {
   const { theme } = useThemeStore();
   const [ip, setIp] = useState("");
@@ -36,6 +39,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [status, setStatus] = useState("2");
   const [saving, setSaving] = useState(false);
   /** 장비 이력 줄 — idx 있으면 기존, 없으면 새로 적은 줄. 저장 때 추가·삭제 API 를 각각 부른다 */
+  /** 설치 위치 선택지 — 등록된 ESXi 호스트 (OS 가 ESXi 이거나 용도에 ESXi 가 들어간 서버) */
+  const [esxiHosts, setEsxiHosts] = useState<Server[]>([]);
   const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
   const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
@@ -52,20 +57,26 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setDescription(server?.description ?? "");
     setStatus(String(server?.status ?? 2));
     setHistory([]); setRemovedHistory([]);
+    Promise.all([getAllServers({ os: "ESXi" }), getAllServers({ q: "ESXi" })])
+      .then(([a, b]) => { const m = new Map<number, Server>(); [...a, ...b].forEach((x) => m.set(x.idx, x)); setEsxiHosts([...m.values()].sort((x, y) => x.ip.localeCompare(y.ip, undefined, { numeric: true }))); })
+      .catch(() => setEsxiHosts([]));
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
   }, [isOpen, server]);
+
+  // 비운 칸: 원래 값이 있었으면 "" 로 보내 지운다 (undefined 는 BE 가 '안 바꿈' 으로 처리해 안 지워졌음)
+  const clr = (v: string, orig: string | null | undefined) => v || (orig ? "" : undefined);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: ServerWriteRequest = {
-      purpose: purpose || undefined,
-      manager: manager || undefined,
-      ports: formatPorts(ports) || undefined,
-      allowed_ips: formatIpList(allowedIps) || undefined,
-      outbound_ips: formatIpList(outboundIps) || undefined,
+      purpose: clr(purpose, server?.purpose),
+      manager: clr(manager, server?.manager),
+      ports: clr(formatPorts(ports), server?.ports),
+      allowed_ips: clr(formatIpList(allowedIps), server?.allowed_ips),
+      outbound_ips: clr(formatIpList(outboundIps), server?.outbound_ips),
       accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
-      location: location || undefined,
-      description: description || undefined,
+      location: clr(location, server?.location),
+      description: clr(description, server?.description),
       status: Number(status),
     };
     if (!server) data.ip = ip.trim();
@@ -117,16 +128,20 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         )}
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
-        <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />
+        <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Server Room, ESXi …" list="locations" />
+        <datalist id="locations">
+          <option value="Server Room" />
+          {esxiHosts.map((h) => <option key={h.idx} value={`ESXi ${h.ip}`} label={h.hostname ?? h.purpose ?? undefined} />)}
+        </datalist>
         <div>
           <label style={labelStyle}>접속 계정 — 방법 | 포트 | 계정 | 비밀번호 (한 서버에 여러 줄){server ? ". 비밀번호는 바꿀 때만 입력" : ""}</label>
-          <datalist id="access-methods"><option value="SSH" /><option value="RDP" /><option value="VNC" /><option value="Web" /><option value="Telnet" /><option value="FTP" /><option value="iDRAC" /></datalist>
+          <datalist id="access-methods"><option value="SSH" /><option value="RDP" /><option value="VNC" /><option value="Web" /><option value="HTTP" /><option value="HTTPS" /><option value="Telnet" /><option value="FTP" /><option value="iDRAC" /></datalist>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {accounts.map((a, i) => {
               const set = (patch: Partial<ServerAccountInput>) => setAccounts(accounts.map((x, k) => (k === i ? { ...x, ...patch } : x)));
               return (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 80px 1fr 1fr 20px", gap: "6px", alignItems: "center" }}>
-                  <input value={a.access} list="access-methods" onChange={(e) => set({ access: e.target.value })} placeholder="SSH, RDP …" style={selectStyle} />
+                  <input value={a.access} list="access-methods" onChange={(e) => { const access = e.target.value; const p = DEFAULT_PORT[access.trim().toLowerCase()]; set(p && !a.port?.trim() ? { access, port: p } : { access }); }} placeholder="SSH, RDP …" style={selectStyle} />
                   <input value={a.port ?? ""} onChange={(e) => set({ port: e.target.value })} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, ...monoStyle }} />
                   <input value={a.account ?? ""} onChange={(e) => set({ account: e.target.value })} placeholder="계정" autoComplete="off" style={{ ...selectStyle, ...monoStyle }} />
                   <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder={server ? "(유지)" : "비밀번호"} autoComplete="new-password" style={{ ...selectStyle, ...monoStyle }} />
