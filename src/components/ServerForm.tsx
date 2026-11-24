@@ -24,6 +24,7 @@ interface ServerFormProps {
  */
 /** 접속 방식 → 기본 포트. 포트 칸이 비어 있을 때만 채운다 */
 const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443" };
+const SERVER_ROOM = "Server Room";
 
 export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProps) {
   const { theme } = useThemeStore();
@@ -39,8 +40,9 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [status, setStatus] = useState("2");
   const [saving, setSaving] = useState(false);
   /** 장비 이력 줄 — idx 있으면 기존, 없으면 새로 적은 줄. 저장 때 추가·삭제 API 를 각각 부른다 */
-  /** 설치 위치 선택지 — 등록된 ESXi 호스트 (OS 가 ESXi 이거나 용도에 ESXi 가 들어간 서버) */
-  const [esxiHosts, setEsxiHosts] = useState<Server[]>([]);
+  /** 설치 위치 선택지 — "Server Room" + 등록된 서버들이 이미 쓰는 위치 값 (새 값을 저장하면 다음부터 선택지에 뜬다).
+   *  값이 서버 IP 면(그 서버 위의 VM) 그 서버 이름을 설명으로 붙인다 */
+  const [locationOptions, setLocationOptions] = useState<{ value: string; label?: string }[]>([]);
   const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
   const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
@@ -57,9 +59,14 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setDescription(server?.description ?? "");
     setStatus(String(server?.status ?? 2));
     setHistory([]); setRemovedHistory([]);
-    Promise.all([getAllServers({ os: "ESXi" }), getAllServers({ q: "ESXi" })])
-      .then(([a, b]) => { const m = new Map<number, Server>(); [...a, ...b].forEach((x) => m.set(x.idx, x)); setEsxiHosts([...m.values()].sort((x, y) => x.ip.localeCompare(y.ip, undefined, { numeric: true }))); })
-      .catch(() => setEsxiHosts([]));
+    getAllServers()
+      .then((all) => {
+        const byIp = new Map(all.map((x) => [x.ip, x]));
+        const values = [...new Set(all.map((x) => (x.location ?? "").trim()).filter((v) => v && v !== SERVER_ROOM))]
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, label: h ? (h.hostname ?? h.purpose ?? undefined) : undefined }; }));
+      })
+      .catch(() => setLocationOptions([]));
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
   }, [isOpen, server]);
 
@@ -128,10 +135,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         )}
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
-        <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Server Room, ESXi …" list="locations" />
+        <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Server Room 또는 호스트 IP" list="locations" />
         <datalist id="locations">
-          <option value="Server Room" />
-          {esxiHosts.map((h) => <option key={h.idx} value={`ESXi ${h.ip}`} label={h.hostname ?? h.purpose ?? undefined} />)}
+          <option value={SERVER_ROOM} />
+          {locationOptions.map((o) => <option key={o.value} value={o.value} label={o.label} />)}
         </datalist>
         <div>
           <label style={labelStyle}>접속 계정 — 방법 | 포트 | 계정 | 비밀번호 (한 서버에 여러 줄){server ? ". 비밀번호는 바꿀 때만 입력" : ""}</label>
