@@ -8,7 +8,7 @@ import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useMemo, useState } from "react";
 import { StateBadge } from "../components/StateBadge";
 import { SERVER_APP } from "../features";
-import { serverNavItems } from "../navigation";
+import { useServerNavItems } from "../navigation";
 import { getAllServers } from "../services/serverService";
 import type { Server } from "../types/server";
 import { driftLabel, timeAgo } from "../utils/format";
@@ -18,6 +18,7 @@ import { InstallGuideModal } from "../components/InstallGuide";
 export function AgentPage() {
   useAppAccess(SERVER_APP);
   const { theme } = useThemeStore();
+  const navItems = useServerNavItems();
   const [servers, setServers] = useState<Server[] | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -53,7 +54,7 @@ export function AgentPage() {
   ];
 
   return (
-    <AppLayout title="에이전트" appName="서버" sidebarItems={serverNavItems} version={__APP_VERSION__} contentMaxWidth="1400px">
+    <AppLayout title="에이전트" appName="서버" sidebarItems={navItems} version={__APP_VERSION__} contentMaxWidth="1400px">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "8px" }}>
         <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.base }}>
           각 서버에 설치된 argus 에이전트 상태{latest && ` · 최신 버전 ${latest}`}

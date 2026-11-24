@@ -8,4 +8,6 @@ export const ServerFeature = {
   VIEW: "server_view",
   CREDENTIALS: "server_credentials",
   MANAGE: "server_manage",
+  /** 열람·변경 기록 메뉴 (기본 ADMIN) */
+  AUDIT: "server_audit",
 } as const;

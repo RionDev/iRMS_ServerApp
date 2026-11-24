@@ -63,3 +63,15 @@ export function hoursLabel(h: number | null): string {
   if (h >= 24) return `${Math.round(h / 24)}일`;
   return `${h}시간`;
 }
+
+/** 열람 기록 행위 라벨 */
+export const AUDIT_ACTION_LABEL: Record<string, string> = {
+  credentials_view: "접속 정보 열람",
+  server_create: "서버 등록",
+  server_update: "서버 수정",
+  accounts_change: "접속 계정 변경",
+  history_change: "장비 이력 변경",
+  server_delete: "서버 삭제",
+  auto_register: "자동 등록",
+  other: "기타",
+};

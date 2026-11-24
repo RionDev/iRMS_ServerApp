@@ -1,6 +1,8 @@
 import apiClient from "@common/services/apiClient";
 import type { Page } from "@common/types/pagination";
 import type {
+  AuditEntry,
+  AuditQuery,
   MetricPoint,
   Server,
   ServerCredential,
@@ -67,6 +69,11 @@ export async function getServerHardware(idx: number): Promise<ServerHardware> {
 
 export async function getServerEvents(idx: number, size = 10): Promise<Page<ServerEvent>> {
   const res = await apiClient.get<Page<ServerEvent>>(`${BASE}/servers/${idx}/events`, { params: { size } });
+  return res.data;
+}
+
+export async function getAudit(query: AuditQuery, cursor?: string, snapshotIdx?: number, size = 50): Promise<Page<AuditEntry>> {
+  const res = await apiClient.get<Page<AuditEntry>>(`${BASE}/audit`, { params: { cursor, snapshot_idx: snapshotIdx, size, ...query } });
   return res.data;
 }
 

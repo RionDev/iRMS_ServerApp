@@ -5,8 +5,10 @@
 ## 책임
 
 - 서버 목록: 상태 카드(전체/정상/경고·위험/오프라인/미수신) → 검색바(OS·호스트명/IP/용도) → 상태 칩 → 표(상태·호스트명·IP·OS·CPU·메모리·디스크·마지막 수신). 60초마다 자동 새로고침
-- 서버 상세(Drawer): 배지·호스트명·액션(접속 정보 — BE 의 `can_view_credentials`(서버 소속 팀 LEAD 이상·ADMIN) 일 때만 / 정보 수정 / 삭제) → 기본 정보 → 현재 자원 미터 → CPU 최근 30분 → 감시 서비스(서버 config.env SERVICES 에 지정한 프로세스의 실행/중지, ESXi 는 VM) → 디스크 S.M.A.R.T → RAID → 최근 이벤트(에이전트가 보낸 비정상 종료·장비 교체) → 장비 이력(사람이 적는 기록: 날짜·내용·작성자, `/history` API, 추가·삭제는 server_manage). 미수신 서버에는 설치 안내. 기본 정보의 "장비 식별자"는 에이전트가 읽은 하드웨어 시리얼
+- 서버 상세(Drawer): 배지·호스트명·액션(접속 정보 — BE 의 `can_view_credentials`(서버 소속 팀 LEAD 이상·ADMIN) 일 때만 / 정보 수정 / 삭제) → 기본 정보 → 현재 자원 미터 → CPU 최근 30분 → 감시 서비스(서버 config.env SERVICES 에 지정한 프로세스의 실행/중지, ESXi 는 VM) → 디스크 S.M.A.R.T → RAID → 최근 이벤트(에이전트가 보낸 비정상 종료·장비 교체) → 장비 이력(사람이 적는 기록: 날짜·내용·작성자, 상세는 읽기만 — 추가·삭제는 [정보 수정] 모달의 "장비 이력" 줄, 저장 때 `/history` POST·DELETE). 미수신 서버에는 설치 안내. 기본 정보의 "장비 식별자"는 에이전트가 읽은 하드웨어 시리얼
 - 서버 등록·수정(Modal): 등록 직후 에이전트 설치 안내 모달(`utils/install.ts`)을 띄운다. 에이전트가 먼저 보고한 서버는 BE 가 바로 활성으로 자동 등록하므로 "정보 수정"으로 담당자·용도·접속 정보(접속 계정 줄 — 방법|포트|계정|비밀번호, 서버당 여러 개, BE `accounts` / `server_accounts`; 방법은 datalist 추천 + 자유 입력 · 사용 포트(용도|포트, `utils/ports.ts` 가 `HTTP:80` 문자열로) · 접근 허용 IP·허용된 외부 IP(IP|설명 줄, `utils/iplist.ts` 가 `IP:설명` 문자열로). 설명 칸은 "메모"(엑셀 etc))를 보완한다(용도·담당자가 비어 있으면 상세에 안내). 승인대기 단계는 없고, 비활성은 폐기 서버 보관용
+- 열람 기록(`pages/AuditPage`, `/audit`): 접속 정보 열람·서버 등록/수정/삭제·접속 계정 변경·장비 이력 변경·자동 등록. 기간·행위·서버·사람 필터. 기능 키 `server_audit`(기본 ADMIN) — 메뉴는 `useServerNavItems()` 가 권한 있을 때만 붙인다
+- 접속 정보 모달: 본인 비밀번호가 틀리면 BE 403 → 입력칸 아래 빨간 글씨(401 은 공용 클라이언트가 토큰 만료로 처리하므로 BE 가 403 을 준다)
 - 에이전트: 서버별 에이전트 버전(최신 대비 "업데이트 필요")·서버 시계·마지막 수신, [설치 명령 보기] → OS 별(Linux/Unix · Windows · ESXi) 명령과 각각의 복사 버튼(`components/InstallGuide.tsx`, 내용은 `utils/install.ts`). 같은 모달을 서버 등록 직후와 미수신 서버 상세에도 쓴다
 
 ## 상태 표현 (BE `state` 그대로)
@@ -25,7 +27,7 @@
 - `src/types/server.ts` — BE 응답 타입, `src/services/serverService.ts` — API 호출 (`/api/resource/*`)
 - `src/utils/format.ts` — 상태 라벨·팀 이름·"n초 전"·가동 시간·시계 차이 표기
 - `src/components/` — StateBadge · Meter · Sparkline · ServerStats · ServerSearchBar · ServerTable · ServerDetail · ServerForm · InstallGuide
-- `src/pages/` — ServerListPage · AgentPage, `src/navigation.tsx` — 사이드바
+- `src/pages/` — ServerListPage · AgentPage · AuditPage, `src/navigation.tsx` — 사이드바
 
 ## 고유 규칙
 

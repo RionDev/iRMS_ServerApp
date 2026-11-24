@@ -10,8 +10,6 @@ import {
   getServerCredentials,
   getServerEvents,
   getServerHistory,
-  addServerHistory,
-  deleteServerHistory,
   getServerHardware,
   getServerMetrics,
 } from "../services/serverService";
@@ -42,18 +40,15 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
   const [hw, setHw] = useState<ServerHardware | null>(null);
   const [events, setEvents] = useState<ServerEvent[]>([]);
   const [history, setHistory] = useState<ServerHistory[]>([]);
-  const [histDate, setHistDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [histText, setHistText] = useState("");
-  const [histBusy, setHistBusy] = useState(false);
-  const loadHistory = () => getServerHistory(s.idx, 20).then((p) => setHistory(p.items)).catch(() => setHistory([]));
   const [credOpen, setCredOpen] = useState(false);
   const [myPw, setMyPw] = useState("");
   const [cred, setCred] = useState<ServerCredential[] | null>(null);
   const [credBusy, setCredBusy] = useState(false);
+  const [credError, setCredError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    setMetrics([]); setHw(null); setEvents([]); setCred(null); setHistory([]); setHistText("");
+    setMetrics([]); setHw(null); setEvents([]); setCred(null); setHistory([]);
     getServerHistory(s.idx, 20).then((p) => mounted && setHistory(p.items)).catch(() => {});
     getServerMetrics(s.idx, 30).then((p) => mounted && setMetrics(p)).catch(() => {});
     getServerHardware(s.idx).then((h) => mounted && setHw(h)).catch(() => {});
@@ -98,22 +93,16 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
     try { await deleteServer(s.idx); onAfterDelete(); onClose(); } catch { /* interceptor alert */ }
   };
 
-  const handleHistAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!histText.trim()) return;
-    setHistBusy(true);
-    try { await addServerHistory(s.idx, histDate, histText.trim()); setHistText(""); await loadHistory(); }
-    catch { alert("이력 추가에 실패했습니다."); }
-    finally { setHistBusy(false); }
-  };
-  const handleHistDelete = async (h: ServerHistory) => {
-    if (!confirm(`이 기록을 삭제할까요?\n${h.happened_at} ${h.content}`)) return;
-    try { await deleteServerHistory(s.idx, h.idx); await loadHistory(); } catch { alert("삭제에 실패했습니다."); }
-  };
   const handleCred = async (e: React.FormEvent) => {
     e.preventDefault();
     setCredBusy(true);
-    try { setCred(await getServerCredentials(s.idx, myPw)); setMyPw(""); } catch { /* interceptor alert */ } finally { setCredBusy(false); }
+    setCredError(null);
+    try { setCred(await getServerCredentials(s.idx, myPw)); setMyPw(""); }
+    catch (e) {
+      // 403 = 본인 비밀번호 틀림 (BE 가 401 대신 403 을 준다 — 401 은 공용 클라이언트가 토큰 만료로 처리)
+      const detail = (e as { response?: { status?: number; data?: { detail?: string } } }).response;
+      setCredError(detail?.status === 403 ? (detail.data?.detail ?? "비밀번호가 올바르지 않습니다.") : "조회에 실패했습니다. 잠시 뒤 다시 시도하세요.");
+    } finally { setCredBusy(false); }
   };
 
   const spec = [s.cpu, s.memory].filter(Boolean).join(" · ") || null;
@@ -255,14 +244,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         </div>
       ))}
 
-      {secTitle("장비 이력", <span style={{ fontWeight: 400 }}>IP 변경 · 부품 교체 · 설정 변경 같은 기록</span>)}
-      {can(ServerFeature.MANAGE) && (
-        <form onSubmit={handleHistAdd} style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
-          <input type="date" value={histDate} onChange={(e) => setHistDate(e.target.value)} required style={{ padding: "6px 8px", borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border}`, fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm, color: theme.colors.text, backgroundColor: theme.colors.surface }} />
-          <input value={histText} onChange={(e) => setHistText(e.target.value)} placeholder="예: HDD 2번 교체 (WD 4TB)" maxLength={2000} style={{ flex: 1, padding: "6px 8px", borderRadius: theme.radius.sm, border: `1px solid ${theme.colors.border}`, fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm, color: theme.colors.text, backgroundColor: theme.colors.surface }} />
-          <Button type="submit" variant="secondary" disabled={histBusy || !histText.trim()} style={{ padding: "6px 12px", fontSize: theme.fontSize.sm }}>추가</Button>
-        </form>
-      )}
+      {secTitle("장비 이력", <span style={{ fontWeight: 400 }}>IP 변경 · 부품 교체 같은 기록{can(ServerFeature.MANAGE) ? " — 추가·삭제는 [정보 수정]" : ""}</span>)}
       {history.length === 0 ? (
         <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>기록 없음</p>
       ) : history.map((h) => (
@@ -270,13 +252,12 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           <span style={{ minWidth: 0 }}>
             <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, marginRight: "8px", whiteSpace: "nowrap" }}>{h.happened_at}</span>
             <span>{h.content}</span>
-            <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm }}> — {h.author}</span>
           </span>
-          {can(ServerFeature.MANAGE) && <button type="button" onClick={() => handleHistDelete(h)} title="삭제" style={{ border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>삭제</button>}
+          <span style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>{h.author}</span>
         </div>
       ))}
 
-      <Modal isOpen={credOpen} onClose={() => { setCredOpen(false); setCred(null); setMyPw(""); }} title="접속 정보">
+      <Modal isOpen={credOpen} onClose={() => { setCredOpen(false); setCred(null); setMyPw(""); setCredError(null); }} title="접속 정보">
         {cred ? (
           cred.length === 0 ? <p style={{ margin: 0, color: theme.colors.textMuted, fontSize: theme.fontSize.sm }}>등록된 계정이 없습니다. "정보 수정"에서 접속 계정을 추가하세요.</p> : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: theme.fontSize.base }}>
@@ -294,7 +275,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ) : (
           <form onSubmit={handleCred}>
             <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>본인 비밀번호로 다시 인증합니다. 조회는 감사 로그에 남습니다.</p>
-            <Input label="내 비밀번호" type="password" value={myPw} onChange={(e) => setMyPw(e.target.value)} autoComplete="current-password" autoFocus />
+            <Input label="내 비밀번호" type="password" value={myPw} onChange={(e) => { setMyPw(e.target.value); setCredError(null); }} autoComplete="current-password" autoFocus error={credError ?? undefined} />
             <div style={{ display: "flex", justifyContent: "flex-end" }}><Button type="submit" disabled={credBusy || !myPw}>확인</Button></div>
           </form>
         )}

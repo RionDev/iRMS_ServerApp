@@ -125,6 +125,29 @@ export interface ServerCredential {
   password: string | null;
 }
 
+export type AuditAction = "credentials_view" | "server_create" | "server_update" | "accounts_change" | "history_change" | "server_delete" | "auto_register" | "other";
+
+export interface AuditEntry {
+  idx: number;
+  server_id: number | null;
+  server_ip: string | null;
+  hostname: string | null;
+  action: AuditAction;
+  content: string;
+  changed_by: number | null;
+  user_name: string | null;
+  client_ip: string | null;
+  created_at: string;
+}
+
+export interface AuditQuery {
+  from?: string;
+  to?: string;
+  action?: AuditAction;
+  q?: string;
+  who?: string;
+}
+
 export interface ServerHistory {
   idx: number;
   happened_at: string;

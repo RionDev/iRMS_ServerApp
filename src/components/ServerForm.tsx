@@ -5,7 +5,8 @@ import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
 import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
-import type { ServerAccountInput } from "../types/server";
+import type { ServerAccountInput, ServerHistory } from "../types/server";
+import { addServerHistory, deleteServerHistory, getServerHistory } from "../services/serverService";
 import type { Server, ServerWriteRequest } from "../types/server";
 
 interface ServerFormProps {
@@ -13,7 +14,8 @@ interface ServerFormProps {
   onClose: () => void;
   /** 있으면 수정, 없으면 등록 */
   server?: Server | null;
-  onSubmit: (data: ServerWriteRequest) => Promise<void>;
+  /** 저장 결과(등록이면 새 서버)를 돌려주면 장비 이력 추가에 쓴다 */
+  onSubmit: (data: ServerWriteRequest) => Promise<Server | void>;
 }
 
 /**
@@ -33,6 +35,9 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("2");
   const [saving, setSaving] = useState(false);
+  /** 장비 이력 줄 — idx 있으면 기존, 없으면 새로 적은 줄. 저장 때 추가·삭제 API 를 각각 부른다 */
+  const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
+  const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -46,6 +51,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "" })));
     setDescription(server?.description ?? "");
     setStatus(String(server?.status ?? 2));
+    setHistory([]); setRemovedHistory([]);
+    if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
   }, [isOpen, server]);
 
   const submit = async (e: React.FormEvent) => {
@@ -63,7 +70,15 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     };
     if (!server) data.ip = ip.trim();
     setSaving(true);
-    try { await onSubmit(data); } finally { setSaving(false); }
+    try {
+      const target = await onSubmit(data);
+      // 장비 이력: 지운 기존 줄 삭제, 새로 적은 줄 추가 (서버 idx 가 필요하므로 저장 뒤)
+      const idx = server?.idx ?? target?.idx;
+      if (idx != null) {
+        for (const hid of removedHistory) await deleteServerHistory(idx, hid).catch(() => {});
+        for (const h of history) if (h.idx == null && h.content.trim() && h.happened_at) await addServerHistory(idx, h.happened_at, h.content.trim()).catch(() => {});
+      }
+    } finally { setSaving(false); }
   };
 
   const selectStyle: React.CSSProperties = {
@@ -138,6 +153,19 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         </div>
         {ipRows("접근 허용 IP (이 서버로 들어올 수 있는 IP) — IP | 설명", allowedIps, setAllowedIps, "192.168.100.0/24", "사내망")}
         {ipRows("허용된 외부 IP (이 서버가 나가는 외부 IP) — IP | 설명", outboundIps, setOutboundIps, "1.2.3.4", "업데이트 서버")}
+        <div>
+          <label style={labelStyle}>장비 이력 — 날짜 | 내용 (작성자는 저장 시 로그인 이름)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {history.map((h, i) => (
+              <div key={h.idx ?? `n${i}`} style={{ display: "grid", gridTemplateColumns: "140px 1fr 20px", gap: "6px", alignItems: "center" }}>
+                <input type="date" value={h.happened_at} disabled={h.idx != null} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, happened_at: e.target.value } : x)))} style={{ ...selectStyle, ...monoStyle }} />
+                <input value={h.content} disabled={h.idx != null} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, content: e.target.value } : x)))} placeholder="예: HDD 2번 교체 (WD 4TB)" maxLength={2000} style={selectStyle} />
+                <button type="button" onClick={() => { if (h.idx != null) setRemovedHistory([...removedHistory, h.idx]); setHistory(history.filter((_, k) => k !== i)); }} title="삭제" style={xBtn}>✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setHistory([...history, { happened_at: new Date().toISOString().slice(0, 10), content: "" }])} style={addBtn}>+ 이력 추가</button>
+          </div>
+        </div>
         <div>
           <label style={labelStyle}>메모</label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="엑셀의 etc 란. 자유 메모" style={{ ...selectStyle, resize: "vertical" }} />

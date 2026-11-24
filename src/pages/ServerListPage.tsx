@@ -17,7 +17,7 @@ import { ServerSearchBar, type ServerFilters } from "../components/ServerSearchB
 import { ServerStats } from "../components/ServerStats";
 import { ServerTable } from "../components/ServerTable";
 import { SERVER_APP, ServerFeature } from "../features";
-import { serverNavItems } from "../navigation";
+import { useServerNavItems } from "../navigation";
 import { createServer, getServer, getServers, updateServer } from "../services/serverService";
 import { InstallGuideModal } from "../components/InstallGuide";
 import type { Server, ServerState, ServerWriteRequest } from "../types/server";
@@ -36,6 +36,7 @@ const REFRESH_MS = 60_000;
 export function ServerListPage() {
   useAppAccess(SERVER_APP);
   const { theme } = useThemeStore();
+  const navItems = useServerNavItems();
   const { can } = useFeatures(SERVER_APP);
   const [filters, setFilters] = useState<ServerFilters>({});
   const [state, setState] = useState<ServerState | "">("");
@@ -72,21 +73,23 @@ export function ServerListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
 
-  const submitForm = async (data: ServerWriteRequest) => {
+  const submitForm = async (data: ServerWriteRequest): Promise<Server | void> => {
     try {
+      let result: Server;
       if (editing) {
-        const updated = await updateServer(editing.idx, data);
-        setSelected(updated);
+        result = await updateServer(editing.idx, data);
+        setSelected(result);
       } else {
-        const created = await createServer(data);
-        setInstallFor(created);
+        result = await createServer(data);
+        setInstallFor(result);
       }
       setFormOpen(false); setEditing(null); refresh();
+      return result;
     } catch { /* interceptor alert */ }
   };
 
   return (
-    <AppLayout title="서버 목록" appName="서버" sidebarItems={serverNavItems} version={__APP_VERSION__} contentMaxWidth="1400px">
+    <AppLayout title="서버 목록" appName="서버" sidebarItems={navItems} version={__APP_VERSION__} contentMaxWidth="1400px">
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: "min(900px, calc(100vh - 180px))" }}>
         <ServerStats reloadKey={reloadKey} />
         <ServerSearchBar
