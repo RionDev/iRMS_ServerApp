@@ -75,3 +75,31 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   auto_register: "자동 등록",
   other: "기타",
 };
+
+/** "185521.0GB" 같은 에이전트 문자열을 1TB 넘으면 TB 로 (181.2TB). 그 외는 그대로 */
+export function sizeLabel(raw: string | null | undefined): string {
+  if (!raw) return "-";
+  const m = raw.match(/^([0-9.]+)\s*GB$/i);
+  if (!m) return raw;
+  const gb = Number(m[1]);
+  if (gb >= 1024) return `${(gb / 1024).toFixed(1)}TB`;
+  return `${gb.toFixed(gb >= 100 ? 0 : 1)}GB`;
+}
+
+/** 상태가 경고·위험인 이유 — BE _state_expr 와 같은 규칙 (CPU·메모리 75/90, 디스크 80/90, S.M.A.R.T, RAID, 시계 60초, 감시 서비스) */
+export function stateReasons(s: Server): string[] {
+  const r: string[] = [];
+  if (s.cpu_pct != null && s.cpu_pct >= 90) r.push(`CPU ${s.cpu_pct}% (위험 90 이상)`);
+  else if (s.cpu_pct != null && s.cpu_pct >= 75) r.push(`CPU ${s.cpu_pct}% (경고 75 이상)`);
+  if (s.mem_pct != null && s.mem_pct >= 90) r.push(`메모리 ${s.mem_pct}% (위험 90 이상)`);
+  else if (s.mem_pct != null && s.mem_pct >= 75) r.push(`메모리 ${s.mem_pct}% (경고 75 이상)`);
+  if (s.disk_used_pct != null && s.disk_used_pct >= 90) r.push(`디스크 ${s.disk_used_pct}% (위험 90 이상)`);
+  else if (s.disk_used_pct != null && s.disk_used_pct >= 80) r.push(`디스크 ${s.disk_used_pct}% (경고 80 이상)`);
+  if (s.smart_health === "failed") r.push("디스크 S.M.A.R.T FAILED (위험)");
+  else if (s.smart_health === "warn") r.push("디스크 S.M.A.R.T 경고 — 재할당·대기 섹터가 있거나 SSD 마모 80% 이상인 디스크가 있음 (아래 표에서 주황색 줄)");
+  if (s.raid_health === "degraded" || s.raid_health === "failed") r.push(`RAID ${s.raid_health} (위험)`);
+  else if (s.raid_health === "rebuilding") r.push("RAID 리빌드 중 (경고)");
+  if (s.time_drift_sec != null && Math.abs(s.time_drift_sec) > 60) r.push(`서버 시계 ${driftLabel(s.time_drift_sec)} (경고, 60초 초과)`);
+  if (s.services_stopped > 0) r.push(`감시 서비스 ${s.services_stopped}개 중지 (경고)`);
+  return r;
+}

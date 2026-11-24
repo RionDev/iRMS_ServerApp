@@ -14,7 +14,7 @@ import {
   getServerMetrics,
 } from "../services/serverService";
 import type { MetricPoint, Server, ServerCredential, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
-import { driftLabel, formatDateTime, hoursLabel, timeAgo, uptimeLabel } from "../utils/format";
+import { driftLabel, formatDateTime, hoursLabel, sizeLabel, stateReasons, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
 import { parsePorts } from "../utils/ports";
 import { parseIpList } from "../utils/iplist";
@@ -114,6 +114,11 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         <div>
           <StateBadge server={s} />
           <h2 style={{ margin: "8px 0 0", fontSize: theme.fontSize.xxl, color: theme.colors.text }}>{s.hostname ?? s.purpose ?? s.ip}</h2>
+          {(s.state === "warning" || s.state === "danger") && (
+            <ul style={{ margin: "6px 0 0", paddingLeft: "18px", fontSize: theme.fontSize.sm, color: stateColor(theme, s.state) }}>
+              {stateReasons(s).map((r) => <li key={r}>{r}</li>)}
+            </ul>
+          )}
         </div>
         <Button variant="secondary" onClick={onClose}>닫기</Button>
       </div>
@@ -141,7 +146,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ["메모", s.description ? <span style={{ whiteSpace: "pre-wrap" }}>{s.description}</span> : null],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],
         ["사양", spec],
-        ["디스크", s.disk_total ? `${s.disk_total} 중 ${s.disks ?? "-"} 남음` : null],
+        ["디스크", s.disk_total ? `${sizeLabel(s.disk_total)} 중 ${sizeLabel(s.disks)} 남음${s.disk_used_pct != null ? ` (${s.disk_used_pct}% 사용)` : ""}` : null],
         ["가동 시간", uptimeLabel(s.uptime_sec)],
         ["서버 시계", <span style={{ color: driftWarn ? theme.colors.warning : undefined }}>{driftLabel(s.time_drift_sec)}</span>],
         ["에이전트", s.agent_version ?? (s.first_seen_at ? "구버전" : "미설치")],
@@ -196,10 +201,12 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>
           {s.smart_health === "none" || !s.first_seen_at ? "수집 대상 아님 (VM·RAID 뒤 디스크·Unix)" : "아직 수집 전"}
         </p>
-      ) : hw.disks.map((d) => (
-        <div key={d.device} style={rowLine}>
+      ) : hw.disks.map((d) => {
+        const bad = d.health === "FAILED" || (d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.wearout_pct ?? 0) >= 80;
+        return (
+        <div key={d.device} style={{ ...rowLine, ...(bad ? { color: d.health === "FAILED" ? theme.colors.danger : theme.colors.warning } : {}) }}>
           <span style={{ minWidth: 0 }}>
-            <span style={mono}>{d.device}</span>
+            <span style={mono}>{d.device}</span>{bad && <span style={{ marginLeft: "6px", fontSize: theme.fontSize.sm, fontWeight: 600 }}>{d.health === "FAILED" ? "위험" : "경고"}</span>}
             {d.model && <span style={{ color: theme.colors.textMuted }}> · {d.model}</span>}
             <div style={{ fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>
               {[
@@ -213,7 +220,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           </span>
           <span style={{ color: healthColor(d.health), fontWeight: 600, fontSize: theme.fontSize.sm, whiteSpace: "nowrap" }}>{d.health ?? "-"}</span>
         </div>
-      ))}
+        );
+      })}
 
       {secTitle("RAID")}
       {!hw || hw.raid.length === 0 ? (
