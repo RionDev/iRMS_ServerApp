@@ -20,6 +20,8 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
   const remoteMounts = hw.mounts.filter((m) => !m.device);
   // mounts.device 는 "sda" 또는 펌웨어 RAID·LVM 처럼 디스크 여러 개면 "sda+sdb"
   const onDev = (m: ServerMount, dev: string) => (m.device ?? "").split("+").includes(dev);
+  // smartctl 이 속성 표를 못 받은 디스크(VM 가상 디스크, 컨트롤러 뒤) — health UNKNOWN 에 수명 값 전부 없음
+  const noSmart = (d: ServerDisk) => (d.health == null || d.health.toUpperCase() === "UNKNOWN") && d.reallocated_sectors == null && d.pending_sectors == null && d.wearout_pct == null && d.power_on_hours == null;
   const mountsOf = (dev: string | null) => (dev ? localMounts.filter((m) => onDev(m, dev)) : []);
   // 디스크 행: hw.disks 전부. S.M.A.R.T 가 없는 로컬 장치(VM 등)는 마운트만으로 한 줄
   const disksByDev = new Map<string, ServerDisk[]>();
@@ -53,7 +55,7 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
   };
   return (
     <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-      <colgroup><col style={{ width: "18%" }} /><col style={{ width: "24%" }} /><col style={{ width: "11%" }} /><col style={{ width: "8%" }} /><col style={{ width: "10%" }} /><col style={{ width: "21%" }} /><col style={{ width: "8%" }} /></colgroup>
+      <colgroup><col style={{ width: "18%" }} /><col style={{ width: "24%" }} /><col style={{ width: "11%" }} /><col style={{ width: "8%" }} /><col style={{ width: "10%" }} /><col style={{ width: "19%" }} /><col style={{ width: "10%" }} /></colgroup>
       <thead><tr><th style={th}>디스크</th><th style={th}>마운트 ← 파일시스템</th><th style={th}>RAID</th><th style={{ ...th, ...r }}>전체</th><th style={{ ...th, ...r }}>사용률</th><th style={{ ...th, ...r }}>수명 (S.M.A.R.T)</th><th style={th}>상태</th></tr></thead>
       <tbody>
         {hw.disks.map((d) => {
@@ -67,11 +69,12 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
               <td style={{ ...td, ...r }}>{totalCell(ms, d)}</td>
               <td style={{ ...td, ...r }}>{usageCell(ms)}</td>
               <td style={{ ...td, ...r }}>
+                {noSmart(d) ? <span style={muted}>S.M.A.R.T 없음</span> : <>
                 <span style={muted}>{d.power_on_hours != null ? `${hoursLabel(d.power_on_hours)} · ` : ""}</span>
                 <span style={{ color: (d.reallocated_sectors ?? 0) > 0 ? theme.colors.warning : undefined, fontWeight: (d.reallocated_sectors ?? 0) > 0 ? 600 : undefined }}>재할당 {d.reallocated_sectors ?? "-"}</span>
-                <span style={muted}> · 대기 {d.pending_sectors ?? "-"}{d.wearout_pct != null ? ` · 마모 ${d.wearout_pct}%` : ""}</span>
+                <span style={muted}> · 대기 {d.pending_sectors ?? "-"}{d.wearout_pct != null ? ` · 마모 ${d.wearout_pct}%` : ""}</span></>}
               </td>
-              <td style={{ ...td, color: b === "danger" ? theme.colors.danger : b === "warning" ? theme.colors.warning : theme.colors.success, fontWeight: 600 }}>{b === "danger" ? "위험" : b === "warning" ? "경고" : d.health ?? "-"}</td>
+              <td style={{ ...td, color: b === "danger" ? theme.colors.danger : b === "warning" ? theme.colors.warning : theme.colors.success, fontWeight: 600 }}>{b === "danger" ? "위험" : b === "warning" ? "경고" : noSmart(d) ? <span style={muted}>읽기 불가</span> : d.health ?? "-"}</td>
             </tr>
           );
         })}
