@@ -18,6 +18,7 @@ import {
 import type { MetricPoint, Server, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
+import { parsePorts } from "../utils/ports";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
@@ -151,7 +152,16 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
           : (s.machine_id ? <span style={mono} title="에이전트가 읽은 하드웨어 시리얼. 같은 IP 에 다른 시리얼이 오면 장비 교체로 본다">{s.machine_id}</span> : null)],
         ["마지막 수신", s.first_seen_at ? `${timeAgo(s.updated_at)} (${formatDateTime(s.updated_at)})` : "-"],
         ["접속", [s.access, s.location].filter(Boolean).join(" · ") || null],
-        ["사용 포트", s.ports ? <span style={mono}>{s.ports}</span> : null],
+        ["사용 포트", s.ports ? (
+          <table style={{ borderCollapse: "collapse", fontSize: theme.fontSize.sm }}><tbody>
+            {parsePorts(s.ports).map((p, i) => (
+              <tr key={i}>
+                <td style={{ padding: "1px 10px 1px 0", color: theme.colors.textMuted }}>{p.purpose || "-"}</td>
+                <td style={{ padding: "1px 0", ...mono }}>{p.port}</td>
+              </tr>
+            ))}
+          </tbody></table>
+        ) : null],
         ["접근 허용 IP", s.allowed_ips ? <span style={mono}>{s.allowed_ips}</span> : null],
         ["허용된 외부 IP", s.outbound_ips ? <span style={mono}>{s.outbound_ips}</span> : null],
       ])}

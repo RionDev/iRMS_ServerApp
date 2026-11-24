@@ -3,6 +3,7 @@ import { Input } from "@common/components/Input";
 import { Modal } from "@common/components/Modal";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
+import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
 import type { Server, ServerWriteRequest } from "../types/server";
 
 interface ServerFormProps {
@@ -22,7 +23,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [ip, setIp] = useState("");
   const [purpose, setPurpose] = useState("");
   const [manager, setManager] = useState("");
-  const [ports, setPorts] = useState("");
+  const [ports, setPorts] = useState<PortEntry[]>([]);
   const [allowedIps, setAllowedIps] = useState("");
   const [outboundIps, setOutboundIps] = useState("");
   const [location, setLocation] = useState("");
@@ -38,7 +39,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setIp(server?.ip ?? "");
     setPurpose(server?.purpose ?? "");
     setManager(server?.manager ?? "");
-    setPorts(server?.ports ?? "");
+    setPorts(server?.ports ? parsePorts(server.ports) : []);
     setAllowedIps(server?.allowed_ips ?? "");
     setOutboundIps(server?.outbound_ips ?? "");
     setLocation(server?.location ?? "");
@@ -54,7 +55,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     const data: ServerWriteRequest = {
       purpose: purpose || undefined,
       manager: manager || undefined,
-      ports: ports || undefined,
+      ports: formatPorts(ports) || undefined,
       allowed_ips: allowedIps || undefined,
       outbound_ips: outboundIps || undefined,
       location: location || undefined,
@@ -87,7 +88,20 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
         <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="예: Server Room" />
         <Input label="접속 방법" value={access} onChange={(e) => setAccess(e.target.value)} placeholder="SSH, RDP, VNC…" />
-        <Input label="사용 포트" value={ports} onChange={(e) => setPorts(e.target.value)} placeholder="예: 22, 80, 443, 3690" />
+        <div>
+          <label style={labelStyle}>사용 포트 (용도 | 포트)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {ports.map((p, i) => (
+              <div key={i} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <input value={p.purpose} onChange={(e) => setPorts(ports.map((x, k) => (k === i ? { ...x, purpose: e.target.value } : x)))} placeholder="용도 (HTTP, SSH, SVN …)" style={{ ...selectStyle, flex: 2 }} />
+                <span style={{ color: theme.colors.textMuted }}>|</span>
+                <input value={p.port} onChange={(e) => setPorts(ports.map((x, k) => (k === i ? { ...x, port: e.target.value } : x)))} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, flex: 1, fontFamily: "ui-monospace, Menlo, monospace" }} />
+                <button type="button" onClick={() => setPorts(ports.filter((_, k) => k !== i))} title="삭제" style={{ border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.base }}>✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setPorts([...ports, { purpose: "", port: "" }])} style={{ alignSelf: "flex-start", border: `1px dashed ${theme.colors.border}`, background: "none", color: theme.colors.textMuted, borderRadius: theme.radius.sm, padding: "4px 10px", cursor: "pointer", fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm }}>+ 포트 추가</button>
+          </div>
+        </div>
         <Input label="접근 허용 IP (이 서버로 들어올 수 있는 IP)" value={allowedIps} onChange={(e) => setAllowedIps(e.target.value)} placeholder="예: 192.168.100.0/24, 192.168.110.5" />
         <Input label="허용된 외부 IP (이 서버가 나가는 외부 IP)" value={outboundIps} onChange={(e) => setOutboundIps(e.target.value)} placeholder="예: 1.2.3.4 (업데이트 서버)" />
         <Input label="계정" value={account} onChange={(e) => setAccount(e.target.value)} autoComplete="off" />
