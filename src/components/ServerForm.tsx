@@ -80,7 +80,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     <Modal isOpen={isOpen} onClose={onClose} title={server ? "서버 정보 수정" : "서버 등록"}>
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {server ? (
-          <div><span style={labelStyle}>IP</span><span style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{server.ip}</span></div>
+          <Input label="IP (변경 불가)" value={server.ip} readOnly disabled />
         ) : (
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
         )}
@@ -102,11 +102,20 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
             <button type="button" onClick={() => setPorts([...ports, { purpose: "", port: "" }])} style={{ alignSelf: "flex-start", border: `1px dashed ${theme.colors.border}`, background: "none", color: theme.colors.textMuted, borderRadius: theme.radius.sm, padding: "4px 10px", cursor: "pointer", fontFamily: theme.fontFamily, fontSize: theme.fontSize.sm }}>+ 포트 추가</button>
           </div>
         </div>
-        <Input label="접근 허용 IP (이 서버로 들어올 수 있는 IP)" value={allowedIps} onChange={(e) => setAllowedIps(e.target.value)} placeholder="예: 192.168.100.0/24, 192.168.110.5" />
-        <Input label="허용된 외부 IP (이 서버가 나가는 외부 IP)" value={outboundIps} onChange={(e) => setOutboundIps(e.target.value)} placeholder="예: 1.2.3.4 (업데이트 서버)" />
+        <div>
+          <label style={labelStyle}>접근 허용 IP (이 서버로 들어올 수 있는 IP) — 한 줄에 하나</label>
+          <textarea value={allowedIps} onChange={(e) => setAllowedIps(e.target.value)} rows={3} placeholder={"192.168.100.0/24\n192.168.110.5  사무실 PC"} style={{ ...selectStyle, resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
+        </div>
+        <div>
+          <label style={labelStyle}>허용된 외부 IP (이 서버가 나가는 외부 IP) — 한 줄에 하나</label>
+          <textarea value={outboundIps} onChange={(e) => setOutboundIps(e.target.value)} rows={3} placeholder={"1.2.3.4  업데이트 서버"} style={{ ...selectStyle, resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
+        </div>
         <Input label="계정" value={account} onChange={(e) => setAccount(e.target.value)} autoComplete="off" />
         <Input label={server ? "비밀번호 (바꿀 때만 입력)" : "비밀번호"} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-        <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="용도 메모" />
+        <div>
+          <label style={labelStyle}>메모</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="엑셀의 etc 란. 자유 메모" style={{ ...selectStyle, resize: "vertical" }} />
+        </div>
         <div>
           <label style={labelStyle}>상태</label>
           <select style={selectStyle} value={status} onChange={(e) => setStatus(e.target.value)}>

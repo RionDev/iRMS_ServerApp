@@ -141,6 +141,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
         ["IP", <span style={mono}>{s.ip}</span>],
         ["용도", s.purpose],
         ["담당자", s.manager],
+        ["메모", s.description ? <span style={{ whiteSpace: "pre-wrap" }}>{s.description}</span> : null],
         ["OS", s.os ? `${s.os}${s.arch ? ` (${s.arch})` : ""}` : null],
         ["사양", spec],
         ["디스크", s.disk_total ? `${s.disk_total} 중 ${s.disks ?? "-"} 남음` : null],
@@ -162,8 +163,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
             ))}
           </tbody></table>
         ) : null],
-        ["접근 허용 IP", s.allowed_ips ? <span style={mono}>{s.allowed_ips}</span> : null],
-        ["허용된 외부 IP", s.outbound_ips ? <span style={mono}>{s.outbound_ips}</span> : null],
+        ["접근 허용 IP", s.allowed_ips ? <span style={{ ...mono, whiteSpace: "pre-wrap" }}>{s.allowed_ips.split(/,\s*/).join("\n")}</span> : null],
+        ["허용된 외부 IP", s.outbound_ips ? <span style={{ ...mono, whiteSpace: "pre-wrap" }}>{s.outbound_ips.split(/,\s*/).join("\n")}</span> : null],
       ])}
 
       {secTitle("현재 자원")}
