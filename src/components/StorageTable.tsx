@@ -18,11 +18,13 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
   }
   const localMounts = hw.mounts.filter((m) => m.device);
   const remoteMounts = hw.mounts.filter((m) => !m.device);
-  const mountsOf = (dev: string | null) => (dev ? localMounts.filter((m) => m.device === dev) : []);
+  // mounts.device 는 "sda" 또는 펌웨어 RAID·LVM 처럼 디스크 여러 개면 "sda+sdb"
+  const onDev = (m: ServerMount, dev: string) => (m.device ?? "").split("+").includes(dev);
+  const mountsOf = (dev: string | null) => (dev ? localMounts.filter((m) => onDev(m, dev)) : []);
   // 디스크 행: hw.disks 전부. S.M.A.R.T 가 없는 로컬 장치(VM 등)는 마운트만으로 한 줄
   const disksByDev = new Map<string, ServerDisk[]>();
   for (const d of hw.disks) { const k = d.os_device ?? ""; disksByDev.set(k, [...(disksByDev.get(k) ?? []), d]); }
-  const localDevsWithoutSmart = [...new Set(localMounts.map((m) => m.device as string))].filter((dev) => !disksByDev.has(dev));
+  const localDevsWithoutSmart = [...new Set(localMounts.flatMap((m) => (m.device ?? "").split("+")))].filter((dev) => dev && !disksByDev.has(dev));
   const raidOf = (d: ServerDisk) => { const r = hw.raid.find((x) => d.raid?.startsWith(x.controller)); return r; };
   const bad = (d: ServerDisk) => d.health === "FAILED" ? "danger" : ((d.reallocated_sectors ?? 0) > 0 || (d.pending_sectors ?? 0) > 0 || (d.wearout_pct ?? 0) >= 80) ? "warning" : null;
   const pctColor = (p: number | null) => p == null ? undefined : p >= 90 ? theme.colors.danger : p >= 80 ? theme.colors.warning : undefined;
