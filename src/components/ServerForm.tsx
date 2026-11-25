@@ -5,6 +5,7 @@ import { ComboInput, type ComboOption } from "./ComboInput";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
 import { formatPorts, parsePorts, portForPurpose, purposeForPort, type PortEntry } from "../utils/ports";
+import { serverTitle } from "../utils/format";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
 import type { ServerAccountInput, ServerHistory } from "../types/server";
 import { addServerHistory, deleteServerHistory, getAllServers, getServerHistory } from "../services/serverService";
@@ -38,6 +39,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [ports, setPorts] = useState<PortEntry[]>([]);
   const [allowedIps, setAllowedIps] = useState<IpEntry[]>([]);
   const [outboundIps, setOutboundIps] = useState<IpEntry[]>([]);
+  const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [accounts, setAccounts] = useState<ServerAccountInput[]>([]);
   const [description, setDescription] = useState("");
@@ -58,6 +60,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setPorts(server?.ports ? parsePorts(server.ports) : []);
     setAllowedIps(parseIpList(server?.allowed_ips));
     setOutboundIps(parseIpList(server?.outbound_ips));
+    setName(server?.name ?? "");
     setLocation(server?.location ?? "");
     setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "", has_password: a.has_password })));
     setDescription(server?.description ?? "");
@@ -68,7 +71,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         const byIp = new Map(all.map((x) => [x.ip, x]));
         const values = [...new Set(all.map((x) => (x.location ?? "").trim()).filter((v) => v && v !== SERVER_ROOM))]
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, hint: h ? (h.hostname ?? h.purpose ?? undefined) : undefined }; }));
+        setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, hint: h ? (serverTitle(h) !== h.ip ? serverTitle(h) : undefined) : undefined }; }));
       })
       .catch(() => setLocationOptions([]));
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
@@ -86,6 +89,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
       allowed_ips: clr(formatIpList(allowedIps), server?.allowed_ips),
       outbound_ips: clr(formatIpList(outboundIps), server?.outbound_ips),
       accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
+      name: clr(name.trim(), server?.name),
       location: clr(location.trim(), server?.location),
       description: clr(description.trim(), server?.description),
       status: Number(status),
@@ -137,6 +141,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         ) : (
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
         )}
+        <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} placeholder={server?.hostname && !/^localhost/i.test(server.hostname) ? server.hostname : "예: ESXi 호스트 1, 빌드 서버"} />
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
         <div>

@@ -38,7 +38,7 @@ export function ServerSearchBar({ onSearch, state, onStateChange, actions }: Ser
         onReset={() => { setOs(""); setQ(""); onSearch({}); }}
       >
         <SearchInput placeholder="OS (예: Ubuntu, Windows)" value={os} onChange={(e) => setOs(e.target.value)} aria-label="OS" style={{ width: "180px" }} />
-        <SearchInput placeholder="호스트명, IP, 용도로 검색" value={q} onChange={(e) => setQ(e.target.value)} aria-label="검색" style={{ flex: 1 }} />
+        <SearchInput placeholder="이름, 호스트명, IP, 용도로 검색" value={q} onChange={(e) => setQ(e.target.value)} aria-label="검색" style={{ flex: 1 }} />
       </SearchBar>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "8px" }}>
         <div style={{ display: "flex", gap: "6px" }}>

@@ -2,7 +2,7 @@ import { BaseTable, type TableColumn } from "@common/components/BaseTable";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useMemo } from "react";
 import type { Server } from "../types/server";
-import { stateReasons, timeAgo } from "../utils/format";
+import { stateReasons, timeAgo, serverTitle } from "../utils/format";
 import { HoverCard } from "./HoverCard";
 import { stateColor, StateBadge } from "./StateBadge";
 import { Meter } from "./Meter";
@@ -43,8 +43,8 @@ export function ServerTable({ servers, onSelect }: ServerTableProps) {
         },
       },
       {
-        key: "hostname", label: "호스트명",
-        render: (s) => <b style={{ fontWeight: 500 }}>{s.hostname ?? s.purpose ?? <span style={muted}>-</span>}</b>,
+        key: "hostname", label: "이름",
+        render: (s) => <b style={{ fontWeight: 500 }} title={s.hostname ?? undefined}>{serverTitle(s)}{s.name && s.hostname && s.hostname !== s.name ? <span style={{ ...muted, fontWeight: 400 }}> {s.hostname}</span> : null}</b>,
         cellStyle: { textAlign: "left" },
       },
       { key: "ip", label: "IP", render: (s) => <span style={{ fontFamily: "ui-monospace, Menlo, Consolas, monospace" }}>{s.ip}</span> },

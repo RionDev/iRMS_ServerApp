@@ -105,3 +105,9 @@ export function stateReasons(s: Server): string[] {
   if (s.services_stopped > 0) r.push(`감시 서비스 ${s.services_stopped}개 중지 (경고)`);
   return r;
 }
+
+/** 화면에 부르는 이름: 사람이 붙인 이름 > 호스트명 > 용도 > IP. localhost 류 호스트명은 이름 구실을 못 하니 건너뛴다 */
+export function serverTitle(s: { name?: string | null; hostname?: string | null; purpose?: string | null; ip: string }): string {
+  const host = s.hostname && !/^localhost(\.localdomain)?$/i.test(s.hostname) ? s.hostname : null;
+  return s.name?.trim() || host || s.purpose?.trim() || s.ip;
+}

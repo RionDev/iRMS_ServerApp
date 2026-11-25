@@ -5,6 +5,8 @@ export type ServerState = "ok" | "warning" | "danger" | "offline" | "unreported"
 export interface Server {
   idx: number;
   ip: string;
+  /** 서버 이름 (사람이 붙임) — 없으면 호스트명을 보여 준다 */
+  name: string | null;
   location: string | null;
   ports: string | null;
   allowed_ips: string | null;
@@ -199,6 +201,7 @@ export interface ServerListQuery {
 
 export interface ServerWriteRequest {
   ip?: string;
+  name?: string;
   location?: string;
   ports?: string;
   allowed_ips?: string;
