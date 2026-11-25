@@ -10,7 +10,7 @@ import { useFeatures } from "@common/hooks/useFeatures";
 import { LAYOUT, useFixedPageSize } from "@common/hooks/useFixedPageSize";
 import { usePagedNav } from "@common/hooks/usePagedNav";
 import { useThemeStore } from "@common/stores/themeStore";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useRef, useEffect, useMemo, useState } from "react";
 import { ServerDetail } from "../components/ServerDetail";
 import { ServerForm } from "../components/ServerForm";
 import { ServerSearchBar, type ServerFilters } from "../components/ServerSearchBar";
@@ -43,6 +43,7 @@ export function ServerListPage() {
   const [selected, setSelected] = useState<Server | null>(null);
   const [editing, setEditing] = useState<Server | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);   // 드로어 안 접속 정보 모달
   const [reloadKey, setReloadKey] = useState(0);
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const [installFor, setInstallFor] = useState<Server | null>(null);   // 등록 직후 에이전트 설치 안내
@@ -61,8 +62,11 @@ export function ServerListPage() {
 
   // 자동 새로고침: 목록은 nav.refresh (기존 행 유지 → 깜빡임 없음), 카드·드로어는 reloadKey 로 다시 읽는다
   const refresh = useCallback(() => { void nav.refresh(); setReloadKey((k) => k + 1); setLastSync(new Date()); }, [nav.refresh]);
+  // 정보 수정·접속 정보 모달이 열려 있는 동안은 건너뛴다 (입력 중 끊기거나 비밀번호를 다시 묻던 것). 닫으면 다음 주기부터
+  const pauseRef = useRef(false);
+  pauseRef.current = formOpen || detailModalOpen;
   useEffect(() => {
-    const t = setInterval(refresh, REFRESH_MS);
+    const t = setInterval(() => { if (!pauseRef.current) refresh(); }, REFRESH_MS);
     return () => clearInterval(t);
   }, [refresh]);
 
@@ -118,6 +122,7 @@ export function ServerListPage() {
       <Drawer isOpen={selected !== null} onClose={() => setSelected(null)} width="900px">
         {selected && (
           <ServerDetail
+            onModalChange={setDetailModalOpen}
             server={selected}
             onClose={() => setSelected(null)}
             onEdit={(s) => { setEditing(s); setFormOpen(true); }}

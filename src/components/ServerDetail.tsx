@@ -28,13 +28,15 @@ interface ServerDetailProps {
   onClose: () => void;
   onEdit: (s: Server) => void;
   onAfterDelete: () => void;
+  /** 접속 정보 모달이 열려 있는 동안 true — 목록 자동 새로고침을 멈추기 위해 */
+  onModalChange?: (open: boolean) => void;
 }
 
 /**
  * 목업 drawer: 헤더(배지+호스트명+액션) → dl(IP·그룹·OS·사양·가동 시간·에이전트·마지막 수신)
  *   → 현재 자원 미터 → CPU 최근 30분 → 감시 서비스 → 디스크 S.M.A.R.T / RAID → 최근 이벤트(에이전트) → 장비 이력(사람이 적는 기록)
  */
-export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: ServerDetailProps) {
+export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModalChange }: ServerDetailProps) {
   const { theme } = useThemeStore();
   const { can } = useFeatures(SERVER_APP);
   const [metrics, setMetrics] = useState<MetricPoint[]>([]);
@@ -42,6 +44,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete }: Serv
   const [events, setEvents] = useState<ServerEvent[]>([]);
   const [history, setHistory] = useState<ServerHistory[]>([]);
   const [credOpen, setCredOpen] = useState(false);
+  useEffect(() => { onModalChange?.(credOpen); return () => onModalChange?.(false); }, [credOpen, onModalChange]);
   const [myPw, setMyPw] = useState("");
   const [cred, setCred] = useState<ServerCredential[] | null>(null);
   const [credBusy, setCredBusy] = useState(false);
