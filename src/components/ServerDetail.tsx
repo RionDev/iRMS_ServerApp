@@ -196,7 +196,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
       ) : s.service_list.map((v) => (
         <div key={v.name} style={rowLine}>
           <span style={mono}>{v.name}</span>
-          <StateBadge state={s.online ? (v.state === "running" ? "ok" : "danger") : "unreported"} label={!s.online ? "알 수 없음" : v.state === "running" ? "실행 중" : "중지"} />
+          <StateBadge state={s.online ? (v.state === "running" ? "ok" : v.state === "off" ? "offline" : "danger") : "unreported"} label={!s.online ? "알 수 없음" : v.state === "running" ? "실행 중" : v.state === "off" ? "꺼짐" : "중지"} />
         </div>
       ))}
 
