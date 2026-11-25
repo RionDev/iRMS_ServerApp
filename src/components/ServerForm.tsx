@@ -4,7 +4,7 @@ import { Modal } from "@common/components/Modal";
 import { ComboInput, type ComboOption } from "./ComboInput";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
-import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
+import { formatPorts, parsePorts, portForPurpose, purposeForPort, type PortEntry } from "../utils/ports";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
 import type { ServerAccountInput, ServerHistory } from "../types/server";
 import { addServerHistory, deleteServerHistory, getAllServers, getServerHistory } from "../services/serverService";
@@ -59,7 +59,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setAllowedIps(parseIpList(server?.allowed_ips));
     setOutboundIps(parseIpList(server?.outbound_ips));
     setLocation(server?.location ?? "");
-    setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "" })));
+    setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "", has_password: a.has_password })));
     setDescription(server?.description ?? "");
     setStatus(String(server?.status ?? 2));
     setHistory([]); setRemovedHistory([]);
@@ -80,14 +80,14 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: ServerWriteRequest = {
-      purpose: clr(purpose, server?.purpose),
-      manager: clr(manager, server?.manager),
+      purpose: clr(purpose.trim(), server?.purpose),
+      manager: clr(manager.trim(), server?.manager),
       ports: clr(formatPorts(ports), server?.ports),
       allowed_ips: clr(formatIpList(allowedIps), server?.allowed_ips),
       outbound_ips: clr(formatIpList(outboundIps), server?.outbound_ips),
       accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
-      location: clr(location, server?.location),
-      description: clr(description, server?.description),
+      location: clr(location.trim(), server?.location),
+      description: clr(description.trim(), server?.description),
       status: Number(status),
     };
     if (!server) data.ip = ip.trim();
@@ -153,7 +153,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
                   <ComboInput value={a.access} options={ACCESS_OPTIONS} onChange={(access) => { const cur = a.port?.trim() ?? ""; set(!cur || cur === defaultPort(a.access) ? { access, port: defaultPort(access) } : { access }); }} placeholder="SSH, RDP …" style={selectStyle} />
                   <input value={a.port ?? ""} onChange={(e) => set({ port: e.target.value })} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, ...monoStyle }} />
                   <input value={a.account ?? ""} onChange={(e) => set({ account: e.target.value })} placeholder="계정" autoComplete="off" style={{ ...selectStyle, ...monoStyle }} />
-                  <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder="비밀번호" autoComplete="new-password" style={{ ...selectStyle, ...monoStyle }} />
+                  <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder={a.has_password ? "●●●●●●●●" : "비밀번호"} title={a.has_password ? "저장된 비밀번호 있음 — 비워 두면 유지, 새로 치면 교체" : undefined} autoComplete="new-password" style={{ ...selectStyle, ...monoStyle, ...(a.has_password && !a.password ? { borderColor: theme.colors.primary } : {}) }} />
                   <button type="button" onClick={() => setAccounts(accounts.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
                 </div>
               );
@@ -166,9 +166,9 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {ports.map((p, i) => (
               <div key={i} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <input value={p.purpose} onChange={(e) => setPorts(ports.map((x, k) => (k === i ? { ...x, purpose: e.target.value } : x)))} placeholder="용도 (HTTP, SSH, SVN …)" style={{ ...selectStyle, flex: 2 }} />
+                <input value={p.purpose} onChange={(e) => { const purpose = e.target.value; const auto = !p.port.trim() ? portForPurpose(purpose) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, purpose, port: auto ?? x.port } : x))); }} placeholder="용도 (HTTP, SSH, SVN …)" style={{ ...selectStyle, flex: 2 }} />
                 <span style={{ color: theme.colors.textMuted }}>|</span>
-                <input value={p.port} onChange={(e) => setPorts(ports.map((x, k) => (k === i ? { ...x, port: e.target.value } : x)))} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, flex: 1, fontFamily: "ui-monospace, Menlo, monospace" }} />
+                <input value={p.port} onChange={(e) => { const port = e.target.value; const auto = !p.purpose.trim() ? purposeForPort(port) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, port, purpose: auto ?? x.purpose } : x))); }} placeholder="포트 (여러 개면 20 21)" style={{ ...selectStyle, flex: 1, fontFamily: "ui-monospace, Menlo, monospace" }} />
                 <button type="button" onClick={() => setPorts(ports.filter((_, k) => k !== i))} title="삭제" style={{ border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.base }}>✕</button>
               </div>
             ))}

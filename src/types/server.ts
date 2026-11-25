@@ -131,13 +131,18 @@ export interface ServerAccount {
   access: string;
   port: string | null;
   account: string | null;
+  /** 비밀번호가 저장돼 있음 (값은 접속 정보에서만) */
+  has_password?: boolean;
 }
 
 export interface ServerAccountInput {
   access: string;
   port?: string;
   account?: string;
+  /** 비우면 수정 시 기존 비밀번호 유지 */
   password?: string;
+  /** 폼 표시용 — 저장된 비밀번호가 있어 ●●●● 로 보여 줌 */
+  has_password?: boolean;
 }
 
 export interface ServerCredential {

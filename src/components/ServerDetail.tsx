@@ -16,7 +16,7 @@ import {
 import type { MetricPoint, Server, ServerCredential, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, sizeLabel, stateReasons, timeAgo, uptimeLabel } from "../utils/format";
 import { InstallGuide } from "./InstallGuide";
-import { parsePorts } from "../utils/ports";
+import { displayPort, parsePorts } from "../utils/ports";
 import { parseIpList } from "../utils/iplist";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
@@ -170,7 +170,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
             {parsePorts(s.ports).map((p, i) => (
               <tr key={i}>
                 <td style={{ padding: "1px 10px 1px 0", color: theme.colors.textMuted }}>{p.purpose || "-"}</td>
-                <td style={{ padding: "1px 0", ...mono }}>{p.port}</td>
+                <td style={{ padding: "1px 0", ...mono }}>{displayPort(p.port)}</td>
               </tr>
             ))}
           </tbody></table>
