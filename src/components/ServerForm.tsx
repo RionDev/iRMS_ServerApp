@@ -1,6 +1,7 @@
 import { Button } from "@common/components/Button";
 import { Input } from "@common/components/Input";
 import { Modal } from "@common/components/Modal";
+import { ComboInput, type ComboOption } from "./ComboInput";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
 import { formatPorts, parsePorts, type PortEntry } from "../utils/ports";
@@ -22,8 +23,11 @@ interface ServerFormProps {
  * 목업 "서버 등록" 모달. 에이전트가 먼저 보고한 서버는 자동 등록되므로
  * 등록은 에이전트를 설치할 수 없는 장비(NAS 등)용이고, 수정은 자동 등록된 서버의 담당자·용도 보완용이다.
  */
-/** 접속 방식 → 기본 포트. 포트 칸이 비어 있을 때만 채운다 */
+/** 접속 방식 → 기본 포트. 포트 칸이 비었거나 이전 방식의 기본 포트 그대로일 때만 바꾼다 (직접 적은 포트는 유지) */
 const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443" };
+const ACCESS_METHODS = ["SSH", "RDP", "VNC", "Web", "HTTP", "HTTPS", "Telnet", "FTP", "iDRAC"];
+const ACCESS_OPTIONS: ComboOption[] = ACCESS_METHODS.map((m) => ({ value: m, hint: DEFAULT_PORT[m.toLowerCase()] }));
+const defaultPort = (access: string) => DEFAULT_PORT[access.trim().toLowerCase()] ?? "";
 const SERVER_ROOM = "Server Room";
 
 export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProps) {
@@ -42,7 +46,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   /** 장비 이력 줄 — idx 있으면 기존, 없으면 새로 적은 줄. 저장 때 추가·삭제 API 를 각각 부른다 */
   /** 설치 위치 선택지 — "Server Room" + 등록된 서버들이 이미 쓰는 위치 값 (새 값을 저장하면 다음부터 선택지에 뜬다).
    *  값이 서버 IP 면(그 서버 위의 VM) 그 서버 이름을 설명으로 붙인다 */
-  const [locationOptions, setLocationOptions] = useState<{ value: string; label?: string }[]>([]);
+  const [locationOptions, setLocationOptions] = useState<ComboOption[]>([]);
   const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
   const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
@@ -64,7 +68,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         const byIp = new Map(all.map((x) => [x.ip, x]));
         const values = [...new Set(all.map((x) => (x.location ?? "").trim()).filter((v) => v && v !== SERVER_ROOM))]
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, label: h ? (h.hostname ?? h.purpose ?? undefined) : undefined }; }));
+        setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, hint: h ? (h.hostname ?? h.purpose ?? undefined) : undefined }; }));
       })
       .catch(() => setLocationOptions([]));
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
@@ -135,23 +139,21 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         )}
         <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
         <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
-        <Input label="설치 위치" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Server Room 또는 호스트 IP" list="locations" />
-        <datalist id="locations">
-          <option value={SERVER_ROOM} />
-          {locationOptions.map((o) => <option key={o.value} value={o.value} label={o.label} />)}
-        </datalist>
+        <div>
+          <label style={labelStyle}>설치 위치</label>
+          <ComboInput value={location} onChange={setLocation} options={[{ value: SERVER_ROOM }, ...locationOptions]} placeholder="Server Room 또는 호스트 IP" style={selectStyle} />
+        </div>
         <div>
           <label style={labelStyle}>접속 계정 — 방법 | 포트 | 계정 | 비밀번호 (한 서버에 여러 줄){server ? ". 비밀번호는 바꿀 때만 입력" : ""}</label>
-          <datalist id="access-methods"><option value="SSH" /><option value="RDP" /><option value="VNC" /><option value="Web" /><option value="HTTP" /><option value="HTTPS" /><option value="Telnet" /><option value="FTP" /><option value="iDRAC" /></datalist>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {accounts.map((a, i) => {
               const set = (patch: Partial<ServerAccountInput>) => setAccounts(accounts.map((x, k) => (k === i ? { ...x, ...patch } : x)));
               return (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 80px 1fr 1fr 20px", gap: "6px", alignItems: "center" }}>
-                  <input value={a.access} list="access-methods" onChange={(e) => { const access = e.target.value; const p = DEFAULT_PORT[access.trim().toLowerCase()]; set(p && !a.port?.trim() ? { access, port: p } : { access }); }} placeholder="SSH, RDP …" style={selectStyle} />
+                  <ComboInput value={a.access} options={ACCESS_OPTIONS} onChange={(access) => { const cur = a.port?.trim() ?? ""; set(!cur || cur === defaultPort(a.access) ? { access, port: defaultPort(access) } : { access }); }} placeholder="SSH, RDP …" style={selectStyle} />
                   <input value={a.port ?? ""} onChange={(e) => set({ port: e.target.value })} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, ...monoStyle }} />
                   <input value={a.account ?? ""} onChange={(e) => set({ account: e.target.value })} placeholder="계정" autoComplete="off" style={{ ...selectStyle, ...monoStyle }} />
-                  <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder={server ? "(유지)" : "비밀번호"} autoComplete="new-password" style={{ ...selectStyle, ...monoStyle }} />
+                  <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder="비밀번호" autoComplete="new-password" style={{ ...selectStyle, ...monoStyle }} />
                   <button type="button" onClick={() => setAccounts(accounts.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
                 </div>
               );

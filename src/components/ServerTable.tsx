@@ -2,9 +2,10 @@ import { BaseTable, type TableColumn } from "@common/components/BaseTable";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useMemo } from "react";
 import type { Server } from "../types/server";
-import { shortReasons, stateReasons, timeAgo } from "../utils/format";
+import { stateReasons, timeAgo } from "../utils/format";
+import { HoverCard } from "./HoverCard";
+import { stateColor, StateBadge } from "./StateBadge";
 import { Meter } from "./Meter";
-import { StateBadge } from "./StateBadge";
 
 interface ServerTableProps {
   servers: Server[];
@@ -19,15 +20,26 @@ export function ServerTable({ servers, onSelect }: ServerTableProps) {
     () => [
       {
         key: "state", label: "상태",
-        // 경고·위험이면 배지 밑에 짧은 사유, 마우스를 올리면 자세한 사유 (상세 화면과 같은 규칙)
+        // 경고·위험이면 배지에 마우스를 올렸을 때 사유 카드 (상세 화면과 같은 규칙)
         render: (s) => {
           const bad = s.state === "warning" || s.state === "danger";
-          return (
-            <span title={bad ? stateReasons(s).join("\n") : undefined} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-              <StateBadge server={s} />
-              {bad && <span style={{ ...muted, fontSize: theme.fontSize.xs, whiteSpace: "nowrap" }}>{shortReasons(s).join(" · ")}</span>}
-            </span>
-          );
+          const color = stateColor(theme, s.state);
+          const card = bad ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, marginBottom: 6, color }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color }} />
+                {s.state === "danger" ? "위험" : "경고"} 사유
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                {stateReasons(s).map((r) => (
+                  <li key={r} style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
+                    <span style={{ color, flex: "none" }}>•</span><span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : undefined;
+          return <HoverCard content={card}><StateBadge server={s} /></HoverCard>;
         },
       },
       {
