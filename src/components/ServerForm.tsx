@@ -171,9 +171,9 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {ports.map((p, i) => (
               <div key={i} style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <input value={p.purpose} onChange={(e) => { const purpose = e.target.value; const auto = !p.port.trim() ? portForPurpose(purpose) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, purpose, port: auto ?? x.port } : x))); }} placeholder="용도 (HTTP, SSH, SVN …)" style={{ ...selectStyle, flex: 2 }} />
+                <input value={p.purpose} onChange={(e) => { const purpose = e.target.value; const cur = p.port.trim(); const wasAuto = !cur || cur === portForPurpose(p.purpose); const auto = wasAuto ? portForPurpose(purpose) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, purpose, port: auto ?? (wasAuto && !portForPurpose(purpose) && cur === portForPurpose(p.purpose) ? "" : x.port) } : x))); }} placeholder="용도 (HTTP, SSH, SVN …)" style={{ ...selectStyle, flex: 2 }} />
                 <span style={{ color: theme.colors.textMuted }}>|</span>
-                <input value={p.port} onChange={(e) => { const port = e.target.value; const auto = !p.purpose.trim() ? purposeForPort(port) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, port, purpose: auto ?? x.purpose } : x))); }} placeholder="포트 (여러 개면 20 21)" style={{ ...selectStyle, flex: 1, fontFamily: "ui-monospace, Menlo, monospace" }} />
+                <input value={p.port} onChange={(e) => { const port = e.target.value; const cur = p.purpose.trim(); const wasAuto = !cur || cur === purposeForPort(p.port); const auto = wasAuto ? purposeForPort(port) : undefined; setPorts(ports.map((x, k) => (k === i ? { ...x, port, purpose: auto ?? (wasAuto && !purposeForPort(port) && cur === purposeForPort(p.port) ? "" : x.purpose) } : x))); }} placeholder="포트 (여러 개면 20 21)" style={{ ...selectStyle, flex: 1, fontFamily: "ui-monospace, Menlo, monospace" }} />
                 <button type="button" onClick={() => setPorts(ports.filter((_, k) => k !== i))} title="삭제" style={{ border: "none", background: "none", color: theme.colors.textMuted, cursor: "pointer", fontSize: theme.fontSize.base }}>✕</button>
               </div>
             ))}
