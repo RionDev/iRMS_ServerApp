@@ -4,7 +4,7 @@ import { Modal } from "@common/components/Modal";
 import { ComboInput, type ComboOption } from "./ComboInput";
 import { useThemeStore } from "@common/stores/themeStore";
 import { useEffect, useState } from "react";
-import { formatPorts, parsePorts, portForPurpose, purposeForPort, type PortEntry } from "../utils/ports";
+import { formatPorts, normalizePort, parsePorts, portForPurpose, purposeForPort, type PortEntry } from "../utils/ports";
 import { serverTitle } from "../utils/format";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
 import type { ServerAccountInput, ServerHistory } from "../types/server";
@@ -76,6 +76,17 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
       .catch(() => setLocationOptions([]));
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
   }, [isOpen, server]);
+
+  // 접속 계정에 방식·포트가 채워지면 사용 포트에도 같은 줄을 넣는다 (같은 포트가 이미 있으면 안 넣고, 지우지는 않는다)
+  useEffect(() => {
+    const missing = accounts
+      .filter((a) => a.access.trim() && (a.port ?? "").trim())
+      .map((a) => ({ purpose: a.access.trim(), port: normalizePort(a.port ?? "") }))
+      .filter((e, i, arr) => arr.findIndex((x) => x.port === e.port) === i)
+      .filter((e) => !ports.some((p) => normalizePort(p.port) === e.port));
+    if (missing.length > 0) setPorts((prev) => [...prev, ...missing.filter((e) => !prev.some((p) => normalizePort(p.port) === e.port))]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts]);
 
   // 비운 칸: 원래 값이 있었으면 "" 로 보내 지운다 (undefined 는 BE 가 '안 바꿈' 으로 처리해 안 지워졌음)
   const clr = (v: string, orig: string | null | undefined) => v || (orig ? "" : undefined);
