@@ -195,7 +195,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
         <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{s.first_seen_at ? "지정된 감시 서비스 없음 — 서버 config.env 의 SERVICES 에 이름[:포트] 를 적으면 여기 표시된다" : "-"}</p>
       ) : s.service_list.map((v) => (
         <div key={v.name} style={rowLine}>
-          <span style={mono}>{v.name}</span>
+          <span><span style={mono}>{v.name}</span>{v.desc ? <span style={{ color: theme.colors.textMuted, marginLeft: "8px" }}>— {v.desc}</span> : null}</span>
           <StateBadge state={s.online ? (v.state === "running" ? "ok" : v.state === "off" ? "offline" : "danger") : "unreported"} label={!s.online ? "알 수 없음" : v.state === "running" ? "실행 중" : v.state === "off" ? "꺼짐" : "중지"} />
         </div>
       ))}

@@ -102,7 +102,10 @@ export function stateReasons(s: Server): string[] {
   if (s.raid_health === "degraded" || s.raid_health === "failed") r.push(`RAID ${s.raid_health} (위험)`);
   else if (s.raid_health === "rebuilding") r.push("RAID 리빌드 중 (경고)");
   if (s.time_drift_sec != null && Math.abs(s.time_drift_sec) > 60) r.push(`서버 시계 ${driftLabel(s.time_drift_sec)} (경고, 60초 초과)`);
-  if (s.services_stopped > 0) r.push(`감시 서비스 ${s.services_stopped}개 중지 (경고)`);
+  if (s.services_stopped > 0) {
+    const names = (s.service_list ?? []).filter((v) => v.state === "stopped").map((v) => (v.desc ? `${v.name} (${v.desc})` : v.name));
+    r.push(`감시 서비스 ${s.services_stopped}개 중지 (경고)${names.length ? ` — ${names.join(", ")}` : ""}`);
+  }
   return r;
 }
 
