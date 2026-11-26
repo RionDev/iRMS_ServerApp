@@ -49,6 +49,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   /** 설치 위치 선택지 — "Server Room" + 등록된 서버들이 이미 쓰는 위치 값 (새 값을 저장하면 다음부터 선택지에 뜬다).
    *  값이 서버 IP 면(그 서버 위의 VM) 그 서버 이름을 설명으로 붙인다 */
   const [locationOptions, setLocationOptions] = useState<ComboOption[]>([]);
+  const [purposeOptions, setPurposeOptions] = useState<ComboOption[]>([]);
+  const [managerOptions, setManagerOptions] = useState<ComboOption[]>([]);
   const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
   const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
@@ -72,8 +74,12 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         const values = [...new Set(all.map((x) => (x.location ?? "").trim()).filter((v) => v && v !== SERVER_ROOM))]
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
         setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, hint: h ? (serverTitle(h) !== h.ip ? serverTitle(h) : undefined) : undefined }; }));
+        // 용도·담당자도 다른 서버에 적힌 값을 선택지로 (새 값은 저장 뒤 다음부터 선택지에)
+        const distinct = (pick: (x: Server) => string | null | undefined) => [...new Set(all.map((x) => (pick(x) ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((v) => ({ value: v }));
+        setPurposeOptions(distinct((x) => x.purpose));
+        setManagerOptions(distinct((x) => x.manager));
       })
-      .catch(() => setLocationOptions([]));
+      .catch(() => { setLocationOptions([]); setPurposeOptions([]); setManagerOptions([]); });
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
   }, [isOpen, server]);
 
@@ -153,8 +159,14 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
         )}
         <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} placeholder={server?.hostname && !/^localhost/i.test(server.hostname) ? server.hostname : "예: ESXi 호스트 1, 빌드 서버"} />
-        <Input label="용도" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="예: 빌드 서버" />
-        <Input label="담당자" value={manager} onChange={(e) => setManager(e.target.value)} placeholder="이름" />
+        <div>
+          <label style={labelStyle}>용도</label>
+          <ComboInput value={purpose} onChange={setPurpose} options={purposeOptions} placeholder="예: 빌드 서버" style={selectStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>담당자</label>
+          <ComboInput value={manager} onChange={setManager} options={managerOptions} placeholder="이름" style={selectStyle} />
+        </div>
         <div>
           <label style={labelStyle}>설치 위치</label>
           <ComboInput value={location} onChange={setLocation} options={[{ value: SERVER_ROOM }, ...locationOptions]} placeholder="Server Room 또는 호스트 IP" style={selectStyle} />
