@@ -34,7 +34,7 @@ const SERVER_ROOM = "Server Room";
 export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProps) {
   const { theme } = useThemeStore();
   const [ip, setIp] = useState("");
-  const [purpose, setPurpose] = useState("");
+  const [purposes, setPurposes] = useState<string[]>([]);   // 용도 여러 개 — 저장은 "A, B" 로 합침
   const [manager, setManager] = useState("");
   const [ports, setPorts] = useState<PortEntry[]>([]);
   const [allowedIps, setAllowedIps] = useState<IpEntry[]>([]);
@@ -57,7 +57,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   useEffect(() => {
     if (!isOpen) return;
     setIp(server?.ip ?? "");
-    setPurpose(server?.purpose ?? "");
+    setPurposes(server?.purpose ? server.purpose.split(",").map((t) => t.trim()).filter(Boolean) : []);
     setManager(server?.manager ?? "");
     setPorts(server?.ports ? parsePorts(server.ports) : []);
     setAllowedIps(parseIpList(server?.allowed_ips));
@@ -76,7 +76,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         setLocationOptions(values.map((v) => { const h = byIp.get(v); return { value: v, hint: h ? (serverTitle(h) !== h.ip ? serverTitle(h) : undefined) : undefined }; }));
         // 용도·담당자도 다른 서버에 적힌 값을 선택지로 (새 값은 저장 뒤 다음부터 선택지에)
         const distinct = (pick: (x: Server) => string | null | undefined) => [...new Set(all.map((x) => (pick(x) ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((v) => ({ value: v }));
-        setPurposeOptions(distinct((x) => x.purpose));
+        setPurposeOptions([...new Set(all.flatMap((x) => (x.purpose ?? "").split(",").map((t) => t.trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b)).map((v) => ({ value: v })));
         setManagerOptions(distinct((x) => x.manager));
       })
       .catch(() => { setLocationOptions([]); setPurposeOptions([]); setManagerOptions([]); });
@@ -100,7 +100,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: ServerWriteRequest = {
-      purpose: clr(purpose.trim(), server?.purpose),
+      purpose: clr(purposes.map((t) => t.trim()).filter(Boolean).join(", "), server?.purpose),
       manager: clr(manager.trim(), server?.manager),
       ports: clr(formatPorts(ports), server?.ports),
       allowed_ips: clr(formatIpList(allowedIps), server?.allowed_ips),
@@ -160,8 +160,16 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         )}
         <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} placeholder={server?.hostname && !/^localhost/i.test(server.hostname) ? server.hostname : "예: ESXi 호스트 1, 빌드 서버"} />
         <div>
-          <label style={labelStyle}>용도</label>
-          <ComboInput value={purpose} onChange={setPurpose} options={purposeOptions} placeholder="예: 빌드 서버" style={selectStyle} />
+          <label style={labelStyle}>용도 (여러 개면 줄 추가 — 저장은 콤마로 합침)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {(purposes.length === 0 ? [""] : purposes).map((v, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 20px", gap: "6px", alignItems: "center" }}>
+                <ComboInput value={v} onChange={(nv) => setPurposes((prev) => { const arr = prev.length === 0 ? [""] : [...prev]; arr[i] = nv; return arr; })} options={purposeOptions.filter((o) => !purposes.includes(o.value) || o.value === v)} placeholder="예: 빌드 서버" style={selectStyle} />
+                <button type="button" onClick={() => setPurposes((prev) => prev.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setPurposes((prev) => [...(prev.length === 0 ? [""] : prev), ""])} style={addBtn}>+ 용도 추가</button>
+          </div>
         </div>
         <div>
           <label style={labelStyle}>담당자</label>
