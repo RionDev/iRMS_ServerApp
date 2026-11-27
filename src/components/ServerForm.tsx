@@ -25,8 +25,8 @@ interface ServerFormProps {
  * 등록은 에이전트를 설치할 수 없는 장비(NAS 등)용이고, 수정은 자동 등록된 서버의 담당자·용도 보완용이다.
  */
 /** 접속 방식 → 기본 포트. 포트 칸이 비었거나 이전 방식의 기본 포트 그대로일 때만 바꾼다 (직접 적은 포트는 유지) */
-const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443", rdp: "3389", vnc: "5900", web: "80", idrac: "443" };
-const ACCESS_METHODS = ["SSH", "RDP", "VNC", "Web", "HTTP", "HTTPS", "Telnet", "FTP", "iDRAC"];
+const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443", rdp: "3389", vnc: "5900" };
+const ACCESS_METHODS = ["SSH", "RDP", "VNC", "HTTP", "HTTPS", "Telnet", "FTP"];
 const ACCESS_OPTIONS: ComboOption[] = ACCESS_METHODS.map((m) => ({ value: m, hint: DEFAULT_PORT[m.toLowerCase()] }));
 const defaultPort = (access: string) => DEFAULT_PORT[access.trim().toLowerCase()] ?? "";
 const SERVER_ROOM = "Server Room";

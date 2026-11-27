@@ -13,10 +13,10 @@ export const KNOWN_PORTS: { purpose: string; port: string }[] = [
   { purpose: "FTP", port: "20+21" }, { purpose: "SSH", port: "22" }, { purpose: "Telnet", port: "23" }, { purpose: "SMTP", port: "25" },
   { purpose: "DNS", port: "53" }, { purpose: "HTTP", port: "80" }, { purpose: "HTTPS", port: "443" }, { purpose: "SMB", port: "445" },
   { purpose: "NFS", port: "2049" }, { purpose: "MySQL", port: "3306" }, { purpose: "RDP", port: "3389" }, { purpose: "SVN", port: "3690" },
-  { purpose: "VNC", port: "5900" }, { purpose: "PostgreSQL", port: "5432" }, { purpose: "iDRAC", port: "443" },
+  { purpose: "VNC", port: "5900" }, { purpose: "PostgreSQL", port: "5432" },
 ];
 export const portForPurpose = (purpose: string): string | undefined => KNOWN_PORTS.find((k) => k.purpose.toLowerCase() === purpose.trim().toLowerCase())?.port;
-export const purposeForPort = (port: string): string | undefined => { const n = normalizePort(port); return n ? KNOWN_PORTS.find((k) => k.port === n && k.purpose !== "iDRAC")?.purpose : undefined; };
+export const purposeForPort = (port: string): string | undefined => { const n = normalizePort(port); return n ? KNOWN_PORTS.find((k) => k.port === n)?.purpose : undefined; };
 
 /** "20 21" "20,21" "20/21" "20+21" → "20+21". 범위(1000-2000)·/tcp 는 그대로 둔다 */
 export function normalizePort(raw: string): string {
