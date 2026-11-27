@@ -161,7 +161,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={server ? "서버 정보 수정" : "서버 등록"}>
+    <Modal isOpen={isOpen} onClose={onClose} title={server ? "서버 정보 수정" : "서버 등록"} staticBackdrop>
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {server ? (
           <Input label="IP (변경 불가)" value={server.ip} readOnly disabled />
