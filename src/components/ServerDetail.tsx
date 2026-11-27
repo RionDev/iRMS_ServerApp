@@ -120,7 +120,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "12px" }}>
         <div>
           <StateBadge server={s} />
-          <h2 style={{ margin: "8px 0 0", fontSize: theme.fontSize.xxl, color: theme.colors.text }}>{serverTitle(s)}{s.name && s.hostname && s.hostname !== s.name ? <span style={{ fontSize: theme.fontSize.base, fontWeight: 400, color: theme.colors.textMuted, marginLeft: "10px" }}>{s.hostname}</span> : null}</h2>
+          <h2 style={{ margin: "8px 0 0", fontSize: theme.fontSize.xxl, color: theme.colors.text }}>{serverTitle(s)}</h2>
           {(s.state === "warning" || s.state === "danger") && (
             <ul style={{ margin: "6px 0 0", paddingLeft: "18px", fontSize: theme.fontSize.sm, color: stateColor(theme, s.state) }}>
               {stateReasons(s).map((r) => <li key={r}>{r}</li>)}

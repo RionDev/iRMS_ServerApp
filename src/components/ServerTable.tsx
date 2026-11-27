@@ -44,7 +44,7 @@ export function ServerTable({ servers, onSelect }: ServerTableProps) {
       },
       {
         key: "hostname", label: "이름",
-        render: (s) => <b style={{ fontWeight: 500 }} title={s.hostname ?? undefined}>{serverTitle(s)}{s.name && s.hostname && s.hostname !== s.name ? <span style={{ ...muted, fontWeight: 400 }}> {s.hostname}</span> : null}</b>,
+        render: (s) => <b style={{ fontWeight: 500 }} title={s.hostname ?? undefined}>{serverTitle(s)}</b>,
         cellStyle: { textAlign: "left" },
       },
       { key: "ip", label: "IP", render: (s) => <span style={{ fontFamily: "ui-monospace, Menlo, Consolas, monospace" }}>{s.ip}</span> },
