@@ -8,7 +8,7 @@ import { formatPorts, normalizePort, parsePorts, portForPurpose, purposeForPort,
 import { serverTitle } from "../utils/format";
 import { formatIpList, parseIpList, type IpEntry } from "../utils/iplist";
 import type { ServerAccountInput, ServerHistory } from "../types/server";
-import { addServerHistory, deleteServerHistory, getAllServers, getServerHistory } from "../services/serverService";
+import { addServerHistory, deleteServerHistory, getAllServers, getServerHistory, updateServerHistory } from "../services/serverService";
 import type { Server, ServerWriteRequest } from "../types/server";
 
 interface ServerFormProps {
@@ -51,7 +51,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [locationOptions, setLocationOptions] = useState<ComboOption[]>([]);
   const [purposeOptions, setPurposeOptions] = useState<ComboOption[]>([]);
   const [managerOptions, setManagerOptions] = useState<ComboOption[]>([]);
-  const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string }[]>([]);
+  const [history, setHistory] = useState<{ idx?: number; happened_at: string; content: string; orig?: { happened_at: string; content: string } }[]>([]);
   const [removedHistory, setRemovedHistory] = useState<number[]>([]);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         setManagerOptions(distinct((x) => x.manager));
       })
       .catch(() => { setLocationOptions([]); setPurposeOptions([]); setManagerOptions([]); });
-    if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content })))).catch(() => {});
+    if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content, orig: { happened_at: h.happened_at, content: h.content } })))).catch(() => {});
   }, [isOpen, server]);
 
   // 접속 계정에 방식·포트가 채워지면 사용 포트에도 같은 줄을 넣는다 (같은 포트가 이미 있으면 안 넣고, 지우지는 않는다)
@@ -119,7 +119,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
       const idx = server?.idx ?? target?.idx;
       if (idx != null) {
         for (const hid of removedHistory) await deleteServerHistory(idx, hid).catch(() => {});
-        for (const h of history) if (h.idx == null && h.content.trim() && h.happened_at) await addServerHistory(idx, h.happened_at, h.content.trim()).catch(() => {});
+        for (const h of history) {
+          if (h.idx == null) { if (h.content.trim() && h.happened_at) await addServerHistory(idx, h.happened_at, h.content.trim()).catch(() => {}); }
+          else if (h.orig && (h.orig.happened_at !== h.happened_at || h.orig.content !== h.content.trim()) && h.content.trim() && h.happened_at) await updateServerHistory(idx, h.idx, h.happened_at, h.content.trim()).catch(() => {});
+        }
       }
     } finally { setSaving(false); }
   };
@@ -218,8 +221,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {history.map((h, i) => (
               <div key={h.idx ?? `n${i}`} style={{ display: "grid", gridTemplateColumns: "140px 1fr 20px", gap: "6px", alignItems: "center" }}>
-                <input type="date" value={h.happened_at} disabled={h.idx != null} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, happened_at: e.target.value } : x)))} style={{ ...selectStyle, ...monoStyle }} />
-                <input value={h.content} disabled={h.idx != null} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, content: e.target.value } : x)))} placeholder="예: HDD 2번 교체 (WD 4TB)" maxLength={2000} style={selectStyle} />
+                <input type="date" value={h.happened_at} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, happened_at: e.target.value } : x)))} style={{ ...selectStyle, ...monoStyle }} />
+                <input value={h.content} onChange={(e) => setHistory(history.map((x, k) => (k === i ? { ...x, content: e.target.value } : x)))} placeholder="예: HDD 2번 교체 (WD 4TB)" maxLength={2000} style={selectStyle} />
                 <button type="button" onClick={() => { if (h.idx != null) setRemovedHistory([...removedHistory, h.idx]); setHistory(history.filter((_, k) => k !== i)); }} title="삭제" style={xBtn}>✕</button>
               </div>
             ))}

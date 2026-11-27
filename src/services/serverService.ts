@@ -87,6 +87,11 @@ export async function addServerHistory(idx: number, happenedAt: string, content:
   return res.data;
 }
 
+export async function updateServerHistory(idx: number, historyIdx: number, happenedAt: string, content: string): Promise<ServerHistory> {
+  const res = await apiClient.put<ServerHistory>(`${BASE}/servers/${idx}/history/${historyIdx}`, { happened_at: happenedAt, content });
+  return res.data;
+}
+
 export async function deleteServerHistory(idx: number, historyIdx: number): Promise<void> {
   await apiClient.delete(`${BASE}/servers/${idx}/history/${historyIdx}`);
 }
