@@ -202,6 +202,8 @@ export interface ServerListQuery {
 export interface ServerWriteRequest {
   ip?: string;
   name?: string;
+  /** 에이전트 보고 전까지의 OS (보고가 오면 에이전트 값으로 덮임) */
+  os?: string;
   location?: string;
   ports?: string;
   allowed_ips?: string;

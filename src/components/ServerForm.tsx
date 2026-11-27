@@ -40,6 +40,8 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
   const [allowedIps, setAllowedIps] = useState<IpEntry[]>([]);
   const [outboundIps, setOutboundIps] = useState<IpEntry[]>([]);
   const [name, setName] = useState("");
+  const [os, setOs] = useState("");
+  const [osOptions, setOsOptions] = useState<ComboOption[]>([]);
   const [location, setLocation] = useState("");
   const [accounts, setAccounts] = useState<ServerAccountInput[]>([]);
   const [description, setDescription] = useState("");
@@ -63,6 +65,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     setAllowedIps(parseIpList(server?.allowed_ips));
     setOutboundIps(parseIpList(server?.outbound_ips));
     setName(server?.name ?? "");
+    setOs(server?.os ?? "");
     setLocation(server?.location ?? "");
     setAccounts((server?.accounts ?? []).map((a) => ({ access: a.access, port: a.port ?? "", account: a.account ?? "", password: "", has_password: a.has_password })));
     setDescription(server?.description ?? "");
@@ -78,6 +81,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
         const distinct = (pick: (x: Server) => string | null | undefined) => [...new Set(all.map((x) => (pick(x) ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((v) => ({ value: v }));
         setPurposeOptions([...new Set(all.flatMap((x) => (x.purpose ?? "").split(",").map((t) => t.trim()).filter(Boolean)))].sort((a, b) => a.localeCompare(b)).map((v) => ({ value: v })));
         setManagerOptions(distinct((x) => x.manager));
+        setOsOptions(distinct((x) => x.os));
       })
       .catch(() => { setLocationOptions([]); setPurposeOptions([]); setManagerOptions([]); });
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content, orig: { happened_at: h.happened_at, content: h.content } })))).catch(() => {});
@@ -109,6 +113,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
       outbound_ips: clr(formatIpList(outboundIps), server?.outbound_ips),
       accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
       name: clr(name.trim(), server?.name),
+      ...(!server || !server.first_seen_at ? { os: os.trim() } : {}),
       location: clr(location.trim(), server?.location),
       description: clr(description.trim(), server?.description),
       status: Number(status),
@@ -162,6 +167,12 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
           <Input label="IP (변경 불가)" value={server.ip} readOnly disabled />
         ) : (
           <Input label="IP" value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.100.x" required />
+        )}
+        {(!server || !server.first_seen_at) && (
+          <div>
+            <label style={labelStyle}>OS <span style={{ fontWeight: 400, color: theme.colors.textMuted }}>(에이전트가 보고하면 그 값으로 바뀜)</span></label>
+            <ComboInput value={os} onChange={setOs} options={osOptions} placeholder="예: Ubuntu 24.04, Windows Server 2019, ESXi 8" style={selectStyle} />
+          </div>
         )}
         <Input label="이름" value={name} onChange={(e) => setName(e.target.value)} placeholder={server?.hostname && !/^localhost/i.test(server.hostname) ? server.hostname : "예: ESXi 호스트 1, 빌드 서버"} />
         <div>

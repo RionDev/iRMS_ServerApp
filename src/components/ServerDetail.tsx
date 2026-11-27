@@ -15,7 +15,7 @@ import {
 } from "../services/serverService";
 import type { MetricPoint, Server, ServerCredential, ServerEvent, ServerHardware, ServerHistory } from "../types/server";
 import { driftLabel, formatDateTime, hoursLabel, sizeLabel, stateReasons, timeAgo, uptimeLabel, serverTitle } from "../utils/format";
-import { InstallGuide } from "./InstallGuide";
+import { InstallGuideModal } from "./InstallGuide";
 import { displayPort, parsePorts } from "../utils/ports";
 import { parseIpList } from "../utils/iplist";
 import { Meter } from "./Meter";
@@ -46,7 +46,8 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
   const [events, setEvents] = useState<ServerEvent[]>([]);
   const [history, setHistory] = useState<ServerHistory[]>([]);
   const [credOpen, setCredOpen] = useState(false);
-  useEffect(() => { onModalChange?.(credOpen); return () => onModalChange?.(false); }, [credOpen, onModalChange]);
+  const [installOpen, setInstallOpen] = useState(false);
+  useEffect(() => { onModalChange?.(credOpen || installOpen); return () => onModalChange?.(false); }, [credOpen, installOpen, onModalChange]);
   const [myPw, setMyPw] = useState("");
   const [cred, setCred] = useState<ServerCredential[] | null>(null);
   const [credBusy, setCredBusy] = useState(false);
@@ -129,16 +130,16 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
         <Button variant="secondary" onClick={onClose}>닫기</Button>
       </div>
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+        {s.state === "unreported" && <Button onClick={() => setInstallOpen(true)}>에이전트 설치</Button>}
         {can(ServerFeature.CREDENTIALS) && s.can_view_credentials && <Button variant="secondary" onClick={() => setCredOpen(true)}>접속 정보</Button>}
         {can(ServerFeature.MANAGE) && <Button variant="secondary" onClick={() => onEdit(s)}>정보 수정</Button>}
         {can(ServerFeature.MANAGE) && <Button variant="secondary" onClick={handleDelete} style={{ color: theme.colors.danger }}>삭제</Button>}
       </div>
 
       {s.state === "unreported" && (
-        <div style={{ margin: "0 0 12px", padding: "10px 12px", borderRadius: theme.radius.sm, backgroundColor: theme.colors.surfaceMuted, fontSize: theme.fontSize.sm, color: theme.colors.text }}>
-          <InstallGuide intro="에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 켜져 있다면 아래 순서로 설치하세요." />
-        </div>
+        <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.textMuted }}>에이전트(argus) 보고가 아직 없습니다. 서버가 꺼져 있거나 에이전트가 설치되지 않은 상태입니다. 설치 순서는 위 "에이전트 설치" 버튼.</p>
       )}
+      <InstallGuideModal isOpen={installOpen} onClose={() => setInstallOpen(false)} intro={<span><b style={mono}>{s.ip}</b> 에 에이전트(argus)를 설치하는 순서입니다. 설치 뒤 1~2분이면 상태가 올라옵니다.</span>} />
       {!s.purpose && !s.manager && (
         <p style={{ margin: "0 0 12px", fontSize: theme.fontSize.sm, color: theme.colors.warning }}>
           용도·담당자가 비어 있습니다. "정보 수정"에서 채우세요.
