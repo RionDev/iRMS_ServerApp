@@ -9,6 +9,9 @@ interface StorageTableProps {
 }
 
 /** 한 줄 = 디스크 한 개. 로컬 디스크는 자기가 이루는 OS 장치의 마운트(df 줄)들을, 원격 마운트(NFS 등)는 볼륨 하나 = NAS 안 디스크 하나로 한 줄 */
+/** 원격 마운트 = 네트워크 파일시스템(nfs·cifs·smb)이거나 출처가 host:/경로·\\\\공유 꼴. device 가 비어도 vxfs·jfs2 같은 로컬(HP-UX·AIX LVM)은 로컬 */
+export const isRemoteMount = (m: ServerMount) => /^(nfs|nfs4|cifs|smb|smbfs|network|fuse\.sshfs)$/i.test(m.fstype ?? "") || /^[^/]+:\//.test(m.fs ?? "") || /^\\\\/.test(m.fs ?? "");
+
 export function StorageTable({ hw, reported }: StorageTableProps) {
   const { theme } = useThemeStore();
   const mono: React.CSSProperties = { fontFamily: "ui-monospace, Menlo, Consolas, monospace" };
@@ -16,8 +19,11 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
   if (!hw || (hw.mounts.length === 0 && hw.disks.length === 0)) {
     return <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSize.sm, margin: 0 }}>{reported ? "아직 수집 전 (설치 뒤 1~2분)" : "-"}</p>;
   }
-  const localMounts = hw.mounts.filter((m) => m.device);
-  const remoteMounts = hw.mounts.filter((m) => !m.device);
+  // 원격 = 네트워크 파일시스템(nfs·cifs·smb)이거나 출처가 host:/경로 꼴. device 가 비어도 vxfs·jfs2 같은 로컬(HP-UX·AIX LVM)은 로컬로
+  const isRemote = isRemoteMount;
+  const remoteMounts = hw.mounts.filter(isRemote);
+  // device 가 없는 로컬 마운트는 "?" 장치 한 줄로 모은다 (디스크 연결을 못 찾은 Unix LVM 등)
+  const localMounts = hw.mounts.filter((m) => !isRemote(m)).map((m) => (m.device ? m : { ...m, device: "?" }));
   // mounts.device 는 "sda" 또는 펌웨어 RAID·LVM 처럼 디스크 여러 개면 "sda+sdb"
   const onDev = (m: ServerMount, dev: string) => (m.device ?? "").split("+").includes(dev);
   // smartctl 이 속성 표를 못 받은 디스크(VM 가상 디스크, 컨트롤러 뒤) — health UNKNOWN 에 수명 값 전부 없음
@@ -87,7 +93,7 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
           const ms = mountsOf(dev);
           return (
             <tr key={`dev-${dev}`}>
-              <td style={td}><span style={mono}>{dev}</span><div style={muted}>S.M.A.R.T 없음 (VM·RAID 뒤·Unix)</div></td>
+              <td style={td}><span style={mono}>{dev === "?" ? "로컬 디스크" : dev}</span><div style={muted}>{dev === "?" ? "디스크 연결 미확인 (Unix LVM) · S.M.A.R.T 없음" : "S.M.A.R.T 없음 (VM·RAID 뒤·Unix)"}</div></td>
               <td style={td}>{mountCell(ms)}</td>
               <td style={td}><span style={muted}>-</span></td>
               <td style={{ ...td, ...r }}>{totalCell(ms)}</td>

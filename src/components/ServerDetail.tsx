@@ -21,7 +21,7 @@ import { parseIpList } from "../utils/iplist";
 import { Meter } from "./Meter";
 import { Sparkline } from "./Sparkline";
 import { StateBadge, stateColor } from "./StateBadge";
-import { StorageTable } from "./StorageTable";
+import { StorageTable, isRemoteMount } from "./StorageTable";
 
 interface ServerDetailProps {
   server: Server;
@@ -203,7 +203,7 @@ export function ServerDetail({ server: s, onClose, onEdit, onAfterDelete, onModa
         </div>
       ))}
 
-      {secTitle("저장소", hw ? <span style={{ fontWeight: 400 }}>한 줄 = 디스크 한 개 · 로컬 {hw.disks.length || hw.mounts.filter((m) => m.device).length} · 원격 {hw.mounts.filter((m) => !m.device).length}{hw.mounts[0] ? ` · ${timeAgo(hw.mounts[0].updated_at)}` : ""}</span> : undefined)}
+      {secTitle("저장소", hw ? <span style={{ fontWeight: 400 }}>한 줄 = 디스크 한 개 · 로컬 {hw.disks.length || hw.mounts.filter((m) => !isRemoteMount(m)).length} · 원격 {hw.mounts.filter(isRemoteMount).length}{hw.mounts[0] ? ` · ${timeAgo(hw.mounts[0].updated_at)}` : ""}</span> : undefined)}
       <StorageTable hw={hw} reported={!!s.first_seen_at} />
 
       {secTitle("최근 이벤트")}
