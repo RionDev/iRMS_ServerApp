@@ -25,7 +25,7 @@ interface ServerFormProps {
  * 등록은 에이전트를 설치할 수 없는 장비(NAS 등)용이고, 수정은 자동 등록된 서버의 담당자·용도 보완용이다.
  */
 /** 접속 방식 → 기본 포트. 포트 칸이 비었거나 이전 방식의 기본 포트 그대로일 때만 바꾼다 (직접 적은 포트는 유지) */
-const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443" };
+const DEFAULT_PORT: Record<string, string> = { ssh: "22", ftp: "21", telnet: "23", http: "80", https: "443", rdp: "3389", vnc: "5900", web: "80", idrac: "443" };
 const ACCESS_METHODS = ["SSH", "RDP", "VNC", "Web", "HTTP", "HTTPS", "Telnet", "FTP", "iDRAC"];
 const ACCESS_OPTIONS: ComboOption[] = ACCESS_METHODS.map((m) => ({ value: m, hint: DEFAULT_PORT[m.toLowerCase()] }));
 const defaultPort = (access: string) => DEFAULT_PORT[access.trim().toLowerCase()] ?? "";
@@ -83,16 +83,18 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     if (server) getServerHistory(server.idx, 100).then((p) => setHistory(p.items.map((h: ServerHistory) => ({ idx: h.idx, happened_at: h.happened_at, content: h.content, orig: { happened_at: h.happened_at, content: h.content } })))).catch(() => {});
   }, [isOpen, server]);
 
-  // 접속 계정에 방식·포트가 채워지면 사용 포트에도 같은 줄을 넣는다 (같은 포트가 이미 있으면 안 넣고, 지우지는 않는다)
-  useEffect(() => {
-    const missing = accounts
+  // 접속 계정에 방식·포트가 채워지면 사용 포트에도 같은 줄을 넣는다 (같은 포트가 이미 있으면 안 넣고, 지우지는 않는다).
+  // 글자 칠 때마다가 아니라 칸을 떠날 때·저장할 때만 — 안 그러면 3389 를 치는 동안 3, 33, 338 이 들어간다
+  const syncPortsFromAccounts = (accs: ServerAccountInput[], cur: PortEntry[]): PortEntry[] => {
+    const missing = accs
       .filter((a) => a.access.trim() && (a.port ?? "").trim())
       .map((a) => ({ purpose: a.access.trim(), port: normalizePort(a.port ?? "") }))
       .filter((e, i, arr) => arr.findIndex((x) => x.port === e.port) === i)
-      .filter((e) => !ports.some((p) => normalizePort(p.port) === e.port));
-    if (missing.length > 0) setPorts((prev) => [...prev, ...missing.filter((e) => !prev.some((p) => normalizePort(p.port) === e.port))]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts]);
+      .filter((e) => !cur.some((p) => normalizePort(p.port) === e.port));
+    return missing.length ? [...cur, ...missing] : cur;
+  };
+  const syncPorts = () => setPorts((prev) => syncPortsFromAccounts(accounts, prev));
+
 
   // 비운 칸: 원래 값이 있었으면 "" 로 보내 지운다 (undefined 는 BE 가 '안 바꿈' 으로 처리해 안 지워졌음)
   const clr = (v: string, orig: string | null | undefined) => v || (orig ? "" : undefined);
@@ -102,7 +104,7 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
     const data: ServerWriteRequest = {
       purpose: clr(purposes.map((t) => t.trim()).filter(Boolean).join(", "), server?.purpose),
       manager: clr(manager.trim(), server?.manager),
-      ports: clr(formatPorts(ports), server?.ports),
+      ports: clr(formatPorts(syncPortsFromAccounts(accounts, ports)), server?.ports),
       allowed_ips: clr(formatIpList(allowedIps), server?.allowed_ips),
       outbound_ips: clr(formatIpList(outboundIps), server?.outbound_ips),
       accounts: accounts.filter((a) => a.access.trim()).map((a) => ({ access: a.access.trim(), port: a.port?.trim() || undefined, account: a.account?.trim() || undefined, password: a.password || undefined })),
@@ -189,8 +191,10 @@ export function ServerForm({ isOpen, onClose, server, onSubmit }: ServerFormProp
               const set = (patch: Partial<ServerAccountInput>) => setAccounts(accounts.map((x, k) => (k === i ? { ...x, ...patch } : x)));
               return (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "110px 80px 1fr 1fr 20px", gap: "6px", alignItems: "center" }}>
+                  <div onBlur={syncPorts} style={{ display: "contents" }}>
                   <ComboInput value={a.access} options={ACCESS_OPTIONS} onChange={(access) => { const cur = a.port?.trim() ?? ""; set(!cur || cur === defaultPort(a.access) ? { access, port: defaultPort(access) } : { access }); }} placeholder="SSH, RDP …" style={selectStyle} />
                   <input value={a.port ?? ""} onChange={(e) => set({ port: e.target.value })} placeholder="포트" inputMode="numeric" style={{ ...selectStyle, ...monoStyle }} />
+                  </div>
                   <input value={a.account ?? ""} onChange={(e) => set({ account: e.target.value })} placeholder="계정" autoComplete="off" style={{ ...selectStyle, ...monoStyle }} />
                   <input value={a.password ?? ""} type="password" onChange={(e) => set({ password: e.target.value })} placeholder={a.has_password ? "●●●●●●●●" : "비밀번호"} title={a.has_password ? "저장된 비밀번호 있음 — 비워 두면 유지, 새로 치면 교체" : undefined} autoComplete="new-password" style={{ ...selectStyle, ...monoStyle, ...(a.has_password && !a.password ? { borderColor: theme.colors.primary } : {}) }} />
                   <button type="button" onClick={() => setAccounts(accounts.filter((_, k) => k !== i))} title="삭제" style={xBtn}>✕</button>
