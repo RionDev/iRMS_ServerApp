@@ -47,9 +47,19 @@ export function StorageTable({ hw, reported }: StorageTableProps) {
       <div style={{ ...muted, ...mono }}>{ms.map((m) => m.fs ?? "").join(" · ")}</div>
     </span>
   );
+  // 디스크 줄 사용률 = 그 디스크 위 마운트들의 합산(사용 합 ÷ 전체 합). 마운트 하나가 80% 넘으면 옆에 작게 그 마운트를 적는다
   const usageCell = (ms: ServerMount[]) => {
-    const p = ms.length ? Math.max(...ms.map((m) => m.used_pct ?? 0)) : null;
-    return <span><span style={{ color: pctColor(p) }}>{p == null ? "-" : `${p}%`}</span>{p != null && bar(p)}</span>;
+    if (ms.length === 0) return <span style={muted}>-</span>;
+    const total = ms.reduce((a, m) => a + (m.total_gb ?? 0), 0);
+    const used = ms.reduce((a, m) => a + (m.used_gb ?? 0), 0);
+    const p = total > 0 ? Math.round((used / total) * 100) : (ms.length === 1 ? (ms[0].used_pct ?? null) : null);
+    const worst = ms.filter((m) => (m.used_pct ?? 0) >= 80).sort((a, b) => (b.used_pct ?? 0) - (a.used_pct ?? 0))[0];
+    return (
+      <span>
+        <span style={{ color: pctColor(p) }}>{p == null ? "-" : `${p}%`}</span>{p != null && bar(p)}
+        {worst && ms.length > 1 && <div style={{ ...muted, ...mono, color: pctColor(worst.used_pct ?? 0) }}>{worst.path} {worst.used_pct}%</div>}
+      </span>
+    );
   };
   const totalCell = (ms: ServerMount[], disk?: ServerDisk) => {
     if (disk?.raid) return <span style={mono}>{ms.length ? sizeLabel(`${ms.reduce((a, m) => a + (m.total_gb ?? 0), 0)}GB`) : "-"}</span>;
