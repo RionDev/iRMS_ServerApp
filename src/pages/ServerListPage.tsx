@@ -83,11 +83,13 @@ export function ServerListPage() {
       if (editing) {
         result = await updateServer(editing.idx, data);
         setSelected(result);
+        setFormOpen(false); setEditing(null); refresh();   // 같은 페이지 다시 읽기 + 드로어(이력 포함) 다시 읽기
       } else {
         result = await createServer(data);
         setInstallFor(result);
+        setFormOpen(false); setEditing(null);
+        nav.reset(); setReloadKey((k) => k + 1); setLastSync(new Date());   // 새 서버는 snapshot 밖이라 refresh 로는 안 보임 — 첫 페이지부터 새 snapshot 으로
       }
-      setFormOpen(false); setEditing(null); refresh();
       return result;
     } catch { /* interceptor alert */ }
   };
@@ -123,6 +125,7 @@ export function ServerListPage() {
         {selected && (
           <ServerDetail
             onModalChange={setDetailModalOpen}
+            reloadKey={reloadKey}
             server={selected}
             onClose={() => setSelected(null)}
             onEdit={(s) => { setEditing(s); setFormOpen(true); }}
